@@ -62,11 +62,4 @@ Alternatively all steps can be reproduced using the following bash script:
 ```bash 
 bash bin/update_analysis.sh
 ```
-## Installation
-
-You can install the released version of covid19.sgene.ltla.rt from [CRAN](https://CRAN.R-project.org) with:
-
-``` r
-install.packages("covid19.sgene.ltla.rt")
-```
 
