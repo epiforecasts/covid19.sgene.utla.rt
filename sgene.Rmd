@@ -25,7 +25,7 @@ library(gt)
 library(lubridate)
 library(loo)
 
-ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds"))
+ltla_rt <- readRDS(here("data", "ltla_rt_with_covariates.rds"))
 short_rt <- ltla_rt %>% 
    filter(generation_time %in% "short")
 long_rt <- ltla_rt %>% 
@@ -79,7 +79,7 @@ plot_rt <- function(rt_data) {
   theme_cowplot() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   labs(size = paste("Cases since",
-                    format(min(by_ltla_rt$week_infection), "%d %B"))) +
+                    format(min(rt_data$week_infection), "%d %B"))) +
   theme(legend.position = "bottom",
         legend.direction = "horizontal",
         legend.box = "vertical")
@@ -129,7 +129,7 @@ color_scheme_set("gray")
 p <- ppc_loo_intervals(
   models[["short"]]$y,
   models[["short"]]$yrep[["interventions_time_by_random_region"]],
-  psis_object = psis, 
+  psis_object =  models[["short"]]$psis[["interventions_time_by_random_region"]], 
   order = "median"
 )
 
@@ -183,7 +183,7 @@ color_scheme_set("gray")
 p <- ppc_loo_intervals(
   models[["long"]]$y,
   models[["long"]]$yrep[["interventions_time_by_random_region"]],
-  psis_object = psis, 
+  psis_object = models[["short"]]$psis[["interventions_time_by_random_region"]], 
   order = "median"
 )
 

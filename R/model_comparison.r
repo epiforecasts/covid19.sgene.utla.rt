@@ -48,6 +48,8 @@ compare_models <- function(file, type, models = NULL) {
     lapply(add_criterion, "loo") %>%
     lapply(loo, save_psis = TRUE)
 
+  lc <- loo_compare(loos)
+  
   ## Model diagnostics -------------------------------------------------------
   y <- fit_data$rt_mean
   yrep <- lapply(fits$models[[type]], posterior_predict)
@@ -64,7 +66,7 @@ compare_models <- function(file, type, models = NULL) {
 
   return(list(post = post,
               loos = loos,
-              lw = lw,
+              lc = lc,
               y = y,
               yrep = yrep,
               psis = psis))
