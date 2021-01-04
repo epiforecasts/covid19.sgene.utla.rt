@@ -27,7 +27,7 @@ tiers <- read_csv(tiers_file) %>%
   ungroup() %>%
   select(-value)
 
-saveRDS(here("data", "tiers.rds"))
+saveRDS(tiers, here("data", "tiers.rds"))
 
 # Extract mobility data ---------------------------------------------------
 mobility_file <- here("data-raw", "google_mobility_2020-12-31.csv")
@@ -35,19 +35,18 @@ mobility_file <- here("data-raw", "google_mobility_2020-12-31.csv")
 mobility <- read_csv(mobility_file) %>%
   select(week_infection = date, ltla_name = name, region = nhs_nm,
          variable, value) %>%
-  inner_join(ltla_rt %>% select(ltla_name, week_infection),
-             by = c("ltla_name", "week_infection")) %>%
   group_by(week_infection, region, variable) %>%
   mutate(median = median(value, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(value = if_else(is.na(value), median, value)) %>%
   select(-region, -median) %>%
+  unique() %>% 
   group_by(variable) %>%
-  mutate(value = (value - mean(value)) / sd(value)) %>%
+  mutate(value = (value - mean(value, na.rm = TRUE)) / sd(value, na.rm = TRUE)) %>%
   ungroup() %>%
-  pivot_wider(names_from = variable)
+  pivot_wider(names_from = variable) 
 
-saveRDS(here("data", "mobility.rds"))
+saveRDS(mobility, here("data", "mobility.rds"))
 
 # Extract sgene data from Pillars data ------------------------------------
 pillar_file <- here("data-raw", "english_pillars.rds")
