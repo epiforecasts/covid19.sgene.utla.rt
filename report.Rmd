@@ -43,11 +43,11 @@ the proportion of cases that were S-gene negative and the effective reproduction
 
 **Results:** We found evidence for increased transmissibility across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that did not adjust for residual variation over time found a comparable effect to that reported elsewhere when a generation time with a mean of 5.5 days was used. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better and found that S-gene negativity was associated with a reduced, but still large, increase in transmissibility. 
 
-**Conclusions:** Our results indicate that even after adjusting for between NHS region residual variation over time S-gene negativity was still associated with an increase in transmissibility. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect was a 19% increase in transissibility. 
+**Conclusions:** Our results indicate that even after adjusting for between NHS region residual variation over time S-gene negativity was still associated with an increase in transmissibility. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect was a 19% increase in transmissibility. 
 
 # Method
 
-## Data **More detail needed here**
+## Data 
 
 We used 4 main sources of data: test positive lower-tier local authority Covid-19 notifications, S-gene status from PCR tests by local authority, Google mobility data stratified by context, and a database of non-pharmaceutical interventions. The data used for this analysis is available from  [https://github.com/epiforecasts/covid19.sgene.ltla.rt/](https://github.com/epiforecasts/covid19.sgene.ltla.rt/).
 
@@ -73,6 +73,10 @@ where $R^-_{t, i}$ is the S-gene negative reproduction number of $R^+_{t, i}$ is
 We used a Gaussian observation model with a single variance. The model was implemented using the `brms` [@brms] package in `R`.
 
 # Results
+
+We found consistent evidence of an association between S-gene negativity and increased LTLA level reproduction number estimates. The association appeared to strengthen over time from the middle of October through to the beginning of December (Figure 1). The association appeared to be both across NHS regions and within NHS regions. Models that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Table 2) but all models had evidence of increased transmissibility due to S-gene negativity with a lower bound in the best fitting model of 19% (Table 3). Using a longer generation time, a model that only adjusted for national level residual variation over time, or a model that did not adjust for residual variation over time increased this lower bound to 26%, 21% and 33% respectively. Similarly, the upper bound of the increase in transmissibility varied from 37% to 52% in models that fit the data comparably, and increased to a maximum of 78% in a model, with a generation time of 5.5 days, that assumed all regional variation not otherwise adjusted for was due to S-gene negativity.
+
+The best fitting model appeared to reproduce estimated reproduction numbers to an acceptable degree (Figure 2) though it could not fully capture the observed variation in the data.
 
 ```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
 plot_rt <- function(rt_data) {
@@ -113,13 +117,25 @@ st <- lapply(models,  function(x) {
     paste0(y[2],  " (",  y[1],  "-",  y[3],  ")")
   })
 })
-```
 
-```{r regression_log_coeff_table, echo=FALSE, results='asis'}
 full_models <-
   c(`Regional static` = "interventions_random_region",
     `National time-varying` = "interventions_time_region",
     `Regional time-varying` = "interventions_time_by_random_region")
+```
+
+```{r echo=FALSE, results='asis'}
+lc <- models[["short"]]$lc[full_models, ]
+fn <- tibble(Model = names(full_models[full_models == rownames(lc)]),
+             `ELPD difference` = round(lc[, "elpd_diff"], 2))
+fn %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 2: Model comparison by difference in expected log-predictive density.*
+
+
+```{r regression_log_coeff_table, echo=FALSE, results='asis'}
 
 fn <- tibble(Model = names(full_models),
              `Estimate (short GT)` = unlist(st[["short"]][full_models]),
@@ -129,7 +145,7 @@ fn %>%
   kbl() %>%
   kable_styling()
 ```
-*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
+*Table 3: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
 
 ```{r fit, echo=FALSE}
 color_scheme_set("gray")
@@ -149,16 +165,6 @@ p <- p +
 print(p)
 ```
 *Figure 2: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots).*
-
-```{r echo=FALSE, results='asis'}
-lc <- models[["short"]]$lc[full_models, ]
-fn <- tibble(Model = names(full_models[full_models == rownames(lc)]),
-             `ELPD difference` = round(lc[, "elpd_diff"], 2))
-fn %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 3: Model comparison by difference in expected log-predictive density.*
 
 # Discussion
 
