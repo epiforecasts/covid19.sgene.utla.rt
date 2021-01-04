@@ -15,7 +15,7 @@ week_start <- wday(max(rt$date))
 tiers_file <- here("data-raw", "NPI_dataset_full_extract_23_12_2020.csv")
 
 tiers <- read_csv(tiers_file) %>%
-  mutate(week_infection = floor_date(date, "week", week_start - 1),
+  mutate(week_infection = floor_date(date, "week", week_start),
          none = if_else(national_lockdown == 1, 0,
                         1 - tier_1 - tier_2 - tier_3 - tier_4)) %>%
   pivot_longer(c(none, starts_with("tier_"), national_lockdown),
