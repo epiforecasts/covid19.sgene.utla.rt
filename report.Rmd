@@ -10,7 +10,7 @@ output:
     pdf_document
 ---
 
-```{r setup, echo = FALSE, cache = FALSE}
+```{r setup, echo = FALSE, cache = FALSE, include = FALSE}
 library(here)
 library(dplyr)
 library(tidyr)
@@ -53,7 +53,7 @@ We used 4 main sources of data: test positive lower-tier local authority Covid-1
 
 ## Statistical analysis
 
-We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2,@ganyani] or with a mean of 5.5 days (SD: 0.5), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2; @ganyani] or with a mean of 5.5 days (SD: 0.5), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
@@ -105,7 +105,7 @@ cat(sep = "",
     format(min(ltla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point ",
-    " represents one LTLA*")
+    " represents one LTLA.*")
 ```
 
 ```{r regression_coeffs, echo=FALSE}
@@ -176,6 +176,8 @@ We found consistent evidence that S-gene negativity was associated with increase
 
 # References
 
+<div id = 'refs'></div>
+
 # Supplementary Information
 
 ```{r r_vs_prop_long, echo=FALSE,fig.width=10, fig.height=10}
@@ -188,7 +190,7 @@ cat(sep = "",
     format(min(ltla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point ",
-    " represents one LTLA*")
+    " represents one LTLA.*")
 ```
 
 ```{r long-fit, echo=FALSE}
