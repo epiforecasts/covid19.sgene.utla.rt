@@ -29,17 +29,15 @@ ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds")) %>%
   filter(generation_time %in% "short")
 ```
 
-## Note
-
-This is preliminary analysis. Everyone attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.
+*This is preliminary analysis. Everyone attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.*
 
 ## Aim
 
-Investigate the changes in the proportion of positive cases that were S-gene negative and correlate them with changes in the reproduction number at the level of lower tier local authorities (LTLA).
+Investigate the changes in the proportion of positive cases that were S-gene negative and correlate them with changes in the estimated reproduction number at the level of lower tier local authorities (LTLA).
 
 # Method
 
-We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We further estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the EpiNow2 R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain generation interval distributions with a mean of 3.6 days (sd: 0.7 days) [@epinow2,@ganyani] or 5.5 days (sd: 0.5 days) [@ferretti], respectively.
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We further estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the EpiNow2 R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2,@ganyani] or with a mean of 5.5 days (SD: 0.5), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
