@@ -1,88 +1,23 @@
 # Packages ----------------------------------------------------------------
-library("brms")
-library("here")
-library("dplyr")
-library("tidyr")
-library("readr")
-library("lubridate")
+library(here)
+library(dplyr)
+library(brms)
 
 # Options -----------------------------------------------------------------
 options(mc.cores = 4)
 
 # Get data ----------------------------------------------------------------
-processed_path <- here::here("data", "processed")
+ltla_rt_with_covariates <- readRDS(here("data", "ltla_rt_with_covariates.rds"))
 
-tiers_file <-
-  here::here("data", "raw", "undated",
-             "NPI_dataset_full_extract_23_12_2020.csv")
-
-sgene_ltla <- readRDS(file.path(processed_path, "sgene_by_ltla.rds"))
-
-week_start <- unique(wday(sgene_ltla$week_infection)) - 1
-
-rt_estimates <-
-  paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-         "master/subnational/united-kingdom-local/cases/summary/rt.csv")
-rt <- vroom::vroom(rt_estimates)
-
-rt_by_ltla <- rt %>%
-  rename(ltla_name = region) %>%
-  filter(type == "estimate")
-
-rt_weekly <- rt_by_ltla %>%
-  mutate(week_infection = floor_date(date, "week", week_start = week_start)) %>%
-  group_by(ltla_name, week_infection) %>%
-  summarise(mean = mean(mean), sd = mean(sd), n = n(), .groups = "drop") %>%
-  filter(n == 7) %>%
-  select(-n)
-
-ltla_rt <- sgene_ltla %>%
-  inner_join(rt_weekly, by = c("week_infection", "ltla_name")) %>%
-  select(week_infection, nhser_name, ltla_name, ltla_code, prop_variant,
-         prop_variant_sd, samples, cases, rt_mean = mean, rt_sd = sd) %>%
-  mutate(time = as.numeric((week_infection - min(week_infection)) / 7))
-
-start_of_week <- unique(wday(ltla_rt$week_infection))
-
-tiers <- read_csv(tiers_file) %>%
-  mutate(week_infection = floor_date(date, "week", start_of_week - 1),
-         none = if_else(national_lockdown == 1, 0,
-                             1 - tier_1 - tier_2 - tier_3 - tier_4)) %>%
-  pivot_longer(c(none, starts_with("tier_"), national_lockdown),
-               names_to = "tier") %>%
-  group_by(ltla_name = ltla, week_infection, tier) %>%
-  summarise(value = sum(value), .groups = "drop") %>%
-  group_by(ltla_name, week_infection) %>%
-  filter(value == max(value)) %>%
-  ungroup() %>%
-  select(-value)
-
-mobility <- read_csv(here::here("data", "raw", "undated",
-                                "google_mobility_2020-12-31.csv")) %>%
-  select(week_infection = date, ltla_name = name, region = nhs_nm,
-         variable, value) %>%
-  inner_join(ltla_rt %>% select(ltla_name, week_infection),
-             by = c("ltla_name", "week_infection")) %>%
-  group_by(week_infection, region, variable) %>%
-  mutate(median = median(value, na.rm = TRUE)) %>%
-  ungroup() %>%
-  mutate(value = if_else(is.na(value), median, value)) %>%
-  select(-region, -median) %>%
-  group_by(variable) %>%
-  mutate(value = (value - mean(value)) / sd(value)) %>%
-  ungroup() %>%
-  pivot_wider(names_from = variable)
-
-ltla_rt_interventions <- ltla_rt %>%
-  inner_join(tiers, by = c("week_infection", "ltla_name")) %>%
-  inner_join(mobility, by = c("week_infection", "ltla_name")) %>%
-  filter(!is.na(prop_variant_sd))
+# filter for type
+ltla_rt_with_covariates <- ltla_rt_with_covariates %>% 
+  filter(generation_time %in% "short")
 
 # add small amount of noise to 0 measurement error
-ltla_rt_interventions <- ltla_rt_interventions %>%
+ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
   mutate(prop_variant_sd = ifelse(prop_variant_sd == 0, 1e-5, prop_variant_sd))
 
-static_rt <- ltla_rt_interventions %>%
+static_rt <- ltla_rt_with_covariates %>%
   filter(week_infection == max(week_infection))
 
 # Add custom family -------------------------------------------------------
@@ -196,7 +131,7 @@ dynamic[["interventions_independent_time_random_region"]] <-
 		parks + transit_stations + workplaces + residential)
 
 # Save fits ---------------------------------------------------------------
-output_path <- here::here("output")
+output_path <- here("output")
 dir.create(output_path, recursive = TRUE, showWarnings = FALSE)
 
 saveRDS(list(models = list(static = static, dynamic = dynamic),
