@@ -24,7 +24,7 @@ compare_models <- function(file, type, models = NULL) {
   ## Add custom family functions ---------------------------------------------
   expose_functions(fits$models[[type]][[1]], vectorize = TRUE)
 
-  log_lik_add_var_student <- function(i, prep) {
+  log_lik_add_var_student <<- function(i, prep) {
     mu <- prep$dpars$mu[, i]
     sigma <- prep$dpars$sigma
     nu <- prep$dpars$nu
@@ -34,7 +34,7 @@ compare_models <- function(file, type, models = NULL) {
     add_var_student_lpdf(y, mu, sigma, nu, alpha, frac)
   }
 
-  posterior_predict_add_var_student <- function(i, prep, ...) {
+  posterior_predict_add_var_student <<- function(i, prep, ...) {
     mu <- prep$dpars$mu[, i]
     sigma <- prep$dpars$sigma
     nu <- prep$dpars$nu
