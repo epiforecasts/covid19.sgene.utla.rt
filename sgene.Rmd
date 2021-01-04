@@ -53,7 +53,7 @@ where $R_t$ is an LTLA-level intercept corresponding to R during national lockdo
 $$ R_{t, i} = (1 + \alpha s_{it}) R^+_{t, i} + s_{it} R^-_{t, i}$$
 where $R^-_{t, i}$ is the S-gene negative reproduction number of $R^+_{t, i}$ is the S-gene positive reproduction number.
 
-The model was implemented using the `brms` [@brms] package in `R`. We used a Gaussian observation model with a single variance.
+We used a Gaussian observation model with a single variance. The model was implemented using the `brms` [@brms] package in `R`.
 
 # Results
 
