@@ -141,8 +141,6 @@ res <- lapply(gt, fit_models,
               data = ltla_rt_with_covariates)
 names(res) <- gt
 
-saveRDS(post, here::here("output", "sgene_model_comparison.rds"))
-
 # Save fits ---------------------------------------------------------------
 output_path <- here("output")
 dir.create(output_path, recursive = TRUE, showWarnings = FALSE)
