@@ -148,6 +148,6 @@ output_path <- here("output")
 dir.create(output_path, recursive = TRUE, showWarnings = FALSE)
 
 save_results <- function(name) {
-  saveRDS(res[[name]], here("output", paste0("sgene_fits_", name, ".rds")))
+  saveRDS(res[[name]], here("output", paste0("sgene_fits_", name, "_gt.rds")))
 }
 lapply(gt, save_results)
