@@ -113,7 +113,7 @@ fn %>%
   kbl() %>%
   kable_styling()
 ```
-*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases*
+*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
 
 ```{r fit, echo=FALSE}
 color_scheme_set("gray")
@@ -132,7 +132,7 @@ p <- p +
 
 print(p)
 ```
-*Figure 2: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots).
+*Figure 2: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots).*
 
 ```{r echo=FALSE, results='asis'}
 lc <- models[["short"]]$lc[full_models, ]
