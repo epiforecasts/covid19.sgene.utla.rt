@@ -5,7 +5,15 @@ Authors@R: c(
   person("Sebastian", "Funk", email = "sebastian.funk@lshtm.ac.uk", role = c("aut", "cre")),
   person("Sam", "Abbott", email = "sam.abbott@lshtm.ac.uk", role = c("aut")))
 Imports: here,
-  data.table
+  brms,
+  loo,
+  data.table,
+  dplyr,
+  tidyr,
+  ggplot2, 
+  cowplot, 
+  vroom,
+  lubridate
 Description: Local area reproduction numbers and S-gene dropouts.
 RoxygenNote: 7.1.0
 NeedsCompilation: no
