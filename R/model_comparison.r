@@ -72,7 +72,7 @@ compare_models <- function(file, type, models = NULL) {
 
 gt <- c("short", "long")
 res <- lapply(gt, function(x) {
-  compare_models(here::here("output", paste0("sgene_fits_", x, "_gt.rds")),
+  compare_models(here("output", paste0("sgene_fits_", x, "_gt.rds")),
                  "dynamic")
 })
 names(res) <- gt
