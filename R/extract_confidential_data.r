@@ -32,7 +32,7 @@ saveRDS(here("data", "tiers.rds"))
 # Extract mobility data ---------------------------------------------------
 mobility_file <- here("data-raw", "google_mobility_2020-12-31.csv")
 
-mobility <- read_csv() %>%
+mobility <- read_csv(mobility_file) %>%
   select(week_infection = date, ltla_name = name, region = nhs_nm,
          variable, value) %>%
   inner_join(ltla_rt %>% select(ltla_name, week_infection),
