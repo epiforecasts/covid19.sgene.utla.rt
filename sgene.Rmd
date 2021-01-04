@@ -25,7 +25,8 @@ library(gt)
 library(lubridate)
 library(loo)
 
-ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds"))
+ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds")) %>% 
+  filter(generation_time %in% "short")
 ```
 
 ## Note
@@ -42,7 +43,7 @@ We calculated the weekly proportion of positive tests that were S-gene negative 
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
-    "We then built a separate model of the expected reproduction number in",
+    "We then built a separate model of the expected reproduction number in ",
     "LTLA $i$ during week $t$ starting in the week beginning ",
     format(min(ltla_rt $week_infection), "%d %B, %Y"),
     ", as a function of local restrictions, mobility indicators and ",
@@ -114,7 +115,7 @@ fn %>%
   kbl() %>%
   kable_styling()
 ```
-*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(s)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases*
+*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases*
 
 ```{r fit, echo=FALSE}
 color_scheme_set("gray")
