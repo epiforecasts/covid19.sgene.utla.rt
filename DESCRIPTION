@@ -1,0 +1,12 @@
+Package: covid19.sgene.ltla.rt
+Version: 0.1.0
+Title: Local Area Reproduction Numbers and S-gene Dropouts
+Authors@R: c(
+  person("Sebastian", "Funk", email = "sebastian.funk@lshtm.ac.uk", role = c("aut", "cre")),
+  person("Sam", "Abbott", email = "sam.abbott@lshtm.ac.uk", role = c("aut")))
+Imports: here,
+  data.table
+Description: Local area reproduction numbers and S-gene dropouts.
+RoxygenNote: 7.1.0
+NeedsCompilation: no
+Language: en-GB

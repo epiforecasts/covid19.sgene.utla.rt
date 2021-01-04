@@ -1,0 +1,182 @@
+---
+title: "Local area reproduction numbers and S-gene dropouts"
+subtitle: "Preliminary analysis"
+author: Sam Abbott, CMMID Covid-19 Working Group, Sebastian Funk
+bibliography: references.bib
+date: 4 January, 2020
+header-includes:
+   - \usepackage{float}
+output:
+    pdf_document
+---
+
+```{r setup, echo = FALSE, cache = FALSE}
+library("here")
+library("dplyr")
+library("tidyr")
+library("ggplot2")
+library("cowplot")
+library("janitor")
+library("kableExtra")
+library("tibble")
+library("brms")
+library("bayesplot")
+library("gt")
+library("lubridate")
+library("loo")
+
+processed_path <- here::here("data", "processed")
+
+rt_estimates_short <-
+  paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+         "master/subnational/united-kingdom-local/cases/summary/rt.csv")
+suppressMessages(rt <- vroom::vroom(rt_estimates))
+
+rt_by_ltla <- rt %>%
+  rename(ltla_name = region) %>%
+  filter(type == "estimate")
+
+rt_weekly <- rt_by_ltla %>%
+  mutate(week_infection = floor_date(date, "week", week_start = week_start)) %>%
+  group_by(ltla_name, week_infection) %>%
+  mutate(n = n()) %>%
+  ungroup() %>%
+  filter(n == 7) %>%
+  select(-n) %>%
+  group_by(ltla_name, week_infection) %>%
+  summarise_if(is.numeric, mean, .groups = "drop")
+
+sgene_by_ltla <- readRDS(file.path(processed_path, "sgene_by_ltla.rds"))
+
+by_ltla_rt <- sgene_by_ltla %>%
+  inner_join(rt_weekly, by = c("week_infection", "ltla_name")) %>%
+  select(week_infection, nhser_name, ltla_name, ltla_code, prop_variant,
+         prop_variant_sd, samples, cases, rt_mean = mean, rt_sd = sd)
+```
+
+## Note
+
+This is preliminary analysis. Everyone attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.
+
+## Aim
+
+Investigate the changes in the proportion of positive cases that were S-gene negative and correlate them with changes in the reproduction number at the level of lower tier local authorities (LTLA).
+
+# Method
+
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We further estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the EpiNow2 R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain generation interval distributions with a mean of 3.6 days (sd: 0.7 days) [@epinow2,@ganyani] or 5.5 days (sd: 0.5 days) [@ferretti], respectively.
+
+```{r results='asis', echo = FALSE}
+cat(sep = "",
+    "We then built a separate model of the expected reproduction number in",
+    "LTLA $i$ during week $t$ starting in the week beginning ",
+    format(min(by_ltla_rt$week_infection), "%d %B, %Y"),
+    ", as a function of local restrictions, mobility indicators and ",
+    "proportion of positive tests S-gene negative:")
+```
+
+$$ R_{i,t} = \left(1 + \alpha f_{it}\right) \exp{\left( s(t) + \sum_j \beta_{j} T_{ijt} + \sum_k \gamma_{k} G_{ikt} + \log R_i \right)} $$
+where $R_t$ is an LTLA-level intercept corresponding to R during national lockdown in November, $T_{ijt}$ is 1 if intervention $j$ (out of: no tiers, tier 1/2/3) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, parks, workplace, etc.) at time $t$ in LTLA $i$ as measured by Google, and s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). The key parameter is $\alpha$, the relative change in reproduction number in the presence of the variant that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested that came back negative for the S-gene, and the reproduction number in any given LTLA is
+$$ R_{t, i} = (1 + \alpha s_{it}) R^+_{t, i} + s_{it} R^-_{t, i}$$
+where $R^-_{t, i}$ is the S-gene negative reproduction number of $R^+_{t, i}$ is the S-gene positive reproduction number.
+
+The model was implemented using the `brms` package in `R`. We used a Gaussian observation model with per-region variance.
+
+# Results
+
+## Regression model
+
+```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
+suppressWarnings(
+  ggplot(by_ltla_rt,
+  aes(x = prop_variant, y = rt_mean,
+                   fill = nhser_name, size = cases)) +
+  geom_jitter(pch = 21) +
+  facet_wrap(. ~ week_infection) +
+  scale_fill_brewer("", palette = "Set1") +
+  xlab("Proportion with S gene dropped") +
+  ylab("Mean reproduction number") +
+  theme_cowplot() +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  labs(size = paste("Cases since",
+                    format(min(by_ltla_rt$week_infection), "%d %B"))) +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "vertical")
+ )
+```
+
+
+```{r results='asis', echo = FALSE}
+cat(sep = "",
+    "*Figure 1: Mean reproduction numbers since in the week beginning ",
+    format(min(by_ltla_rt$week_infection), "%d %B, %Y"),
+    ", compared to the proportion of all test-positives tested for S-gene",
+    " that tested S-gene positive/negative that week. Each point ",
+    " represents one LTLA*")
+```
+
+```{r regression_coeffs, echo=FALSE}
+models <- readRDS(here::here("output", "sgene_model_comparison.rds"))
+
+st <- lapply(models,  function(x) {
+  lapply(x$post, function(y) {
+    paste0(y[2],  " (",  y[1],  "-",  y[3],  ")")
+  })
+})
+```
+
+```{r regression_log_coeff_table, echo=FALSE, results='asis'}
+full_models <-
+  c(`Regional static` = "interventions_random_region",
+    `National time-varying` = "interventions_time_region",
+    `Regional time-varying` = "interventions_time_by_random_region")
+
+fn <- tibble(Model = names(full_models),
+             `Estimate (short GT)` = unlist(st[["short"]][full_models]),
+             `Estimate (long GT)` = unlist(st[["long"]][full_models]))
+
+fn %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(s)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases*
+
+```{r fit, echo=FALSE}
+color_scheme_set("gray")
+
+p <- ppc_loo_intervals(
+  models[["short"]]$y,
+  models[["short"]]$yrep[["interventions_time_by_random_region"]],
+  psis_object = psis, 
+  order = "median"
+)
+
+p <- p +
+  theme(legend.position = "none") +
+  xlab("Model prediction vs. data") +
+  ylab("Rt")
+
+print(p)
+```
+*Figure 2: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots).
+
+```{r echo=FALSE, results='asis'}
+lc <- models[["short"]]$lc[full_models, ]
+fn <- tibble(Model = names(full_models[full_models == rownames(lc)]),
+             `ELPD difference` = round(lc[, "elpd_diff"], 2))
+fn %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 3: Model comparison by difference in expected log-predictive density.*
+
+# Discussion
+
+We studied the relationship between S-gene dropout (as a proxy for the new variant of concern) and reproduction numbers using three related models that had varying degrees of flexibility in ascribing changes in the reproduction numbers to factors not explained by the proportion of cases with S-gene dropout. The model with region-specific splines suggests the smallest effect (central estimate: `r paste0(models[["short"]]$post[["interventions_time_by_random_region"]][2] * 100,"%")` increase and `r paste0(models[["long"]]$post[["interventions_time_by_random_region"]][2] * 100,"%")` with short and long generation interval, respectively). This might be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of S-gene dropouts, and is therefore largely a model of within-regions LTLA-level differences. The largest effect of S-gene dropout (central estimate: `r paste0(models[["short"]]$post[["interventions_random_region"]][2] * 100, "%")` increase and `r paste0(models[["long"]]$post[["interventions_random_region"]][2] * 100, "%")` increase with short and long generation interval, respectively) was seen in the model that modelled all temporal variation as related to interventions, mobility and S-gene dropout. This model yielded a poorer fit to the data than the more flexible models that allowed for time-varying model no ascribed to these factors.
+
+Our estimates with the longer generation interval when attributing are comparable with ones from other modelling studies (both of which used a generation interval centred around 6.5 days, i.e. longer than our "long" interval) which were in the order of 50-74% [@davies2020] or 50-75% [@imperial42]. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect, especially where this would cause the reproduction number to cross 1.
+
+Our estimates should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be subnational variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could be an overestimate. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene dropout observed in every LTLA per week. Because of this, uncertainty in our regression coefficient underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between S-gene dropouts and the reproduction number.
+
+# References
