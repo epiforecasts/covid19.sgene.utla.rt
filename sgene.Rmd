@@ -11,47 +11,21 @@ output:
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE}
-library("here")
-library("dplyr")
-library("tidyr")
-library("ggplot2")
-library("cowplot")
-library("janitor")
-library("kableExtra")
-library("tibble")
-library("brms")
-library("bayesplot")
-library("gt")
-library("lubridate")
-library("loo")
+library(here)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(cowplot)
+library(janitor)
+library(kableExtra)
+library(tibble)
+library(brms)
+library(bayesplot)
+library(gt)
+library(lubridate)
+library(loo)
 
-processed_path <- here::here("data", "processed")
-
-rt_estimates_short <-
-  paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-         "master/subnational/united-kingdom-local/cases/summary/rt.csv")
-suppressMessages(rt <- vroom::vroom(rt_estimates))
-
-rt_by_ltla <- rt %>%
-  rename(ltla_name = region) %>%
-  filter(type == "estimate")
-
-rt_weekly <- rt_by_ltla %>%
-  mutate(week_infection = floor_date(date, "week", week_start = week_start)) %>%
-  group_by(ltla_name, week_infection) %>%
-  mutate(n = n()) %>%
-  ungroup() %>%
-  filter(n == 7) %>%
-  select(-n) %>%
-  group_by(ltla_name, week_infection) %>%
-  summarise_if(is.numeric, mean, .groups = "drop")
-
-sgene_by_ltla <- readRDS(file.path(processed_path, "sgene_by_ltla.rds"))
-
-by_ltla_rt <- sgene_by_ltla %>%
-  inner_join(rt_weekly, by = c("week_infection", "ltla_name")) %>%
-  select(week_infection, nhser_name, ltla_name, ltla_code, prop_variant,
-         prop_variant_sd, samples, cases, rt_mean = mean, rt_sd = sd)
+ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds"))
 ```
 
 ## Note
@@ -70,7 +44,7 @@ We calculated the weekly proportion of positive tests that were S-gene negative 
 cat(sep = "",
     "We then built a separate model of the expected reproduction number in",
     "LTLA $i$ during week $t$ starting in the week beginning ",
-    format(min(by_ltla_rt$week_infection), "%d %B, %Y"),
+    format(min(ltla_rt $week_infection), "%d %B, %Y"),
     ", as a function of local restrictions, mobility indicators and ",
     "proportion of positive tests S-gene negative:")
 ```
@@ -88,7 +62,7 @@ The model was implemented using the `brms` package in `R`. We used a Gaussian ob
 
 ```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
 suppressWarnings(
-  ggplot(by_ltla_rt,
+  ggplot(ltla_rt,
   aes(x = prop_variant, y = rt_mean,
                    fill = nhser_name, size = cases)) +
   geom_jitter(pch = 21) +
@@ -110,14 +84,14 @@ suppressWarnings(
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
     "*Figure 1: Mean reproduction numbers since in the week beginning ",
-    format(min(by_ltla_rt$week_infection), "%d %B, %Y"),
+    format(min(ltla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point ",
     " represents one LTLA*")
 ```
 
 ```{r regression_coeffs, echo=FALSE}
-models <- readRDS(here::here("output", "sgene_model_comparison.rds"))
+models <- readRDS(here("output", "sgene_model_comparison.rds"))
 
 st <- lapply(models,  function(x) {
   lapply(x$post, function(y) {

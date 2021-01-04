@@ -1,9 +1,9 @@
 ## Packages and options ----------------------------------------------------
-library("bayesplot")
-library("brms")
-library("loo")
-library("ggplot2")
-library("dplyr")
+library(bayesplot)
+library(brms)
+library(loo)
+library(ggplot2)
+library(dplyr)
 
 options(mc.cores = 1)
 
