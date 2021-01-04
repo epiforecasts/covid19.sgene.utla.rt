@@ -25,8 +25,11 @@ library(gt)
 library(lubridate)
 library(loo)
 
-ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds")) %>% 
-  filter(generation_time %in% "short")
+ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds"))
+short_rt <- ltla_rt %>% 
+   filter(generation_time %in% "short")
+long_rt <- ltla_rt %>% 
+   filter(generation_time %in% "long")
 ```
 
 *This is preliminary analysis. Everyone attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.*
@@ -36,6 +39,10 @@ ltla_rt <- readRDS(here("data", "ltla_rt_with_interventions.rds")) %>%
 Investigate the changes in the proportion of positive cases that were S-gene negative and correlate them with changes in the estimated reproduction number at the level of lower tier local authorities (LTLA).
 
 # Method
+
+## Data
+
+## Statistical analysis
 
 We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We further estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the EpiNow2 R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2,@ganyani] or with a mean of 5.5 days (SD: 0.5), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
 
@@ -60,8 +67,8 @@ We used a Gaussian observation model with a single variance. The model was imple
 ## Regression model
 
 ```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
-suppressWarnings(
-  ggplot(ltla_rt,
+plot_rt <- function(rt_data) {
+    ggplot(rt_data,
   aes(x = prop_variant, y = rt_mean,
                    fill = nhser_name, size = cases)) +
   geom_jitter(pch = 21) +
@@ -76,13 +83,14 @@ suppressWarnings(
   theme(legend.position = "bottom",
         legend.direction = "horizontal",
         legend.box = "vertical")
- )
+}
+suppressWarnings(plot_rt(short_rt))
 ```
 
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
-    "*Figure 1: Mean reproduction numbers since in the week beginning ",
+    "*Figure 1: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
     format(min(ltla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point ",
@@ -153,3 +161,37 @@ Our estimates with the longer generation interval without adjusting for addition
 Our estimates should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be LTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene dropout observed in every LTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between S-gene dropouts and the reproduction number.
 
 # References
+
+# Supplementary Information
+
+```{r r_vs_prop_long, echo=FALSE,fig.width=10, fig.height=10}
+suppressWarnings(plot_rt(long_rt))
+```
+
+```{r results='asis', echo = FALSE}
+cat(sep = "",
+    "*Supplementary Figure 1: Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
+    format(min(ltla_rt$week_infection), "%d %B, %Y"),
+    ", compared to the proportion of all test-positives tested for S-gene",
+    " that tested S-gene positive/negative that week. Each point ",
+    " represents one LTLA*")
+```
+
+```{r long-fit, echo=FALSE}
+color_scheme_set("gray")
+
+p <- ppc_loo_intervals(
+  models[["long"]]$y,
+  models[["long"]]$yrep[["interventions_time_by_random_region"]],
+  psis_object = psis, 
+  order = "median"
+)
+
+p <- p +
+  theme(legend.position = "none") +
+  xlab("Model prediction vs. data") +
+  ylab("Rt")
+
+print(p)
+```
+*Figure 2: Predictions of the best fitting long generation interval model (per-region spline) compared to the data (solid dots).*
