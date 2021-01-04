@@ -32,7 +32,7 @@ long_rt <- ltla_rt %>%
    filter(generation_time %in% "long")
 ```
 
-*This is preliminary analysis. Everyone attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.*
+*This is preliminary analysis. Every attempt was made to avoid errors and acknowledge limitations but the code and analysis have not yet undergone full review.*
 
 ## Aim
 
