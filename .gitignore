@@ -6,3 +6,4 @@ data-raw/english_pillars.rds
 output
 data-raw/google_mobility*
 data-raw/NPI*
+*.html
