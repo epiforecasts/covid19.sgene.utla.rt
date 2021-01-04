@@ -132,7 +132,7 @@ fit_models <- function(gt, data) {
                     parks + transit_stations + workplaces + residential)
   
   return(list(models = list(static = static, dynamic = dynamic),
-              data = list(static = static_data, dynamic = dynamic_data))
+              data = list(static = static_data, dynamic = dynamic_data)))
 }
 
 # fit models

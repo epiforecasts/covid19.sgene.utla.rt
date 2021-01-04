@@ -16,7 +16,10 @@ Imports: here,
   lubridate,
   bayesplot,
   kableExtra, 
-  gt
+  gt,
+  rmarkdown,
+  janitor,
+  tibble
 Description: Local area reproduction numbers and S-gene dropouts.
 RoxygenNote: 7.1.0
 NeedsCompilation: no
