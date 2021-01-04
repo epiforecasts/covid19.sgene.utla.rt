@@ -64,8 +64,6 @@ We used a Gaussian observation model with a single variance. The model was imple
 
 # Results
 
-## Regression model
-
 ```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
 plot_rt <- function(rt_data) {
     ggplot(rt_data,
