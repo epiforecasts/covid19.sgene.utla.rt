@@ -64,7 +64,7 @@ compare_models <- function(file, type, models = NULL) {
 
   return(list(post = post,
               loos = loos,
-              lc = lc,
+              lw = lw,
               y = y,
               yrep = yrep,
               psis = psis))
@@ -77,4 +77,4 @@ res <- lapply(gt, function(x) {
 })
 names(res) <- gt
 
-saveRDS(post, here::here("output", "sgene_model_comparison.rds"))
+saveRDS(res, here::here("output", "sgene_model_comparison.rds"))
