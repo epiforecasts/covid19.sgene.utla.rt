@@ -5,7 +5,7 @@ This repository contains the data and code for our report exploring the associat
 
 ## Reproducibility
 
-## Data
+### Data
 
 All data used in the analysis can be found in the `data` folder in `rds` format. Available data include: 
 
@@ -15,7 +15,7 @@ All data used in the analysis can be found in the `data` folder in `rds` format.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
 - `tiers.rds`: LTLA level tier level over time.
 
-## Dependencies
+### Dependencies
 
 The dependencies for this analysis can be installed using (in the working directory of the analysis):
 
@@ -24,7 +24,7 @@ install.packages("devtools")
 devtools::install_deps()
 ```
 
-## Code
+### Code
 
 
 All publicly available data sources can be re-extracted using (here and following in the working directory of the analysis):
