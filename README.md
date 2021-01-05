@@ -1,7 +1,7 @@
 
 # Local area reproduction numbers and S-gene dropouts
 
-This repository contains the data and code for our report exploring the association between lower-tier local area (LTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://github.com/epiforecasts/covid19.sgene.ltla.rt/report.pdf/).
+This repository contains the data and code for our report exploring the association between lower-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://github.com/epiforecasts/covid19.sgene.ltla.rt/report.pdf/).
 
 ## Reproducibility
 
@@ -9,11 +9,11 @@ This repository contains the data and code for our report exploring the associat
 
 All data used in the analysis can be found in the `data` folder in `rds` format. Available data include: 
 
-- `ltla_rt_with_covariates.rds`: LTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
-- `rt.rds`: Summarised daily LTLA reproduction number estimates using both a short and a long generation time.
-- `sgene_by_ltla.rds`: Weekly test positivity data for the S-gene by LTLA.
+- `utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
+- `rt.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
-- `tiers.rds`: LTLA level tier level over time.
+- `tiers.rds`: UTLA level tier level over time.
 
 ### Dependencies
 
