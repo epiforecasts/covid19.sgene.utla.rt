@@ -14,7 +14,7 @@ utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) 
 add_var_student <- custom_family(
   "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
   links = c("log", "identity", "identity", "identity"),
-  lb = c(NA, 0, 1, NA),
+  lb = c(NA, 0, 1, 0),
   type = "real",
   vars = "vreal1[n]"
 )
@@ -22,11 +22,11 @@ add_var_student <- custom_family(
 stan_funs <- "
 real add_var_student_lpdf(real y, real mu, real sigma, real nu, real alpha,
                           real f) {
-    real combined_mu = (1 + alpha * f) * mu;
+    real combined_mu = (1 + (alpha - 1) * f) * mu;
     return student_t_lpdf(y | nu, combined_mu, sigma);
                             }
 real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
-    real combined_mu = (1 + alpha * f) * mu;
+    real combined_mu = (1 + (alpha - 1) * f) * mu;
     return student_t_rng(nu, combined_mu, sigma);
   }
 "
@@ -34,7 +34,7 @@ stanvars <- stanvar(block = "functions", scode = stan_funs)
 
 # Set up shared priors ----------------------------------------------------
 priors <- c(prior(gamma(2, 0.1), class = nu),
-            prior(student_t(3, 0, 0.5), class = alpha),
+            prior(lognormal(0, 1), class = alpha),
             prior(student_t(3, 0, 0.5), class = sigma))
 
 # Set up model ------------------------------------------------------------
@@ -46,7 +46,7 @@ base_model <- function(form, iter = 2000, ...) {
 }
 
 # Fit models --------------------------------------------------------------
-fit_models <- function(gt, data) {
+fit_models <- function(gt, data, main_only = TRUE) {
   # filter for target
   dynamic_data <- data %>% 
     filter(generation_time %in% gt)
@@ -61,11 +61,13 @@ fit_models <- function(gt, data) {
   }
   # fit models
   static <- list()
-  static[["intercept"]] <- static_model(rt_mean | vreal(prop_variant) ~ 1,
-                                        prior = priors)
-  static[["region"]] <- static_model(rt_mean | vreal(prop_variant) ~ nhser_name,
-                                     prior = c(priors,
-                                               prior(student_t(3, 0, 0.5), class = "b")))
+  if (!main_only) {
+    static[["intercept"]] <- static_model(rt_mean | vreal(prop_variant) ~ 1,
+                                          prior = priors)
+    static[["region"]] <- static_model(rt_mean | vreal(prop_variant) ~ nhser_name,
+                                       prior = c(priors,
+                                                 prior(student_t(3, 0, 0.5), class = "b")))
+  }
   
   # Dynamic model -----------------------------------------------------------
   # set model settings and priors
@@ -78,56 +80,69 @@ fit_models <- function(gt, data) {
   }
   # fit models
   dynamic <- list()
-  dynamic[["interventions_only"]] <- 
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier)
-  
-  dynamic[["interventions"]] <- 
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + 
-                    retail_and_recreation + grocery_and_pharmacy + 
-                    parks + transit_stations + workplaces + residential)
-  
-  dynamic[["interventions_random"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + (1 | utla_name) + 
-                    retail_and_recreation + grocery_and_pharmacy + 
-                    parks + transit_stations + workplaces + residential)
-  
-  dynamic[["interventions_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + nhser_name + 
-                    retail_and_recreation + grocery_and_pharmacy + 
-                    parks + transit_stations + workplaces + residential)
-  
+  if (!main_only) {
+    dynamic[["interventions_only"]] <- 
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier)
+    
+    dynamic[["interventions"]] <- 
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + 
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+    
+    dynamic[["interventions_random"]] <-
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + (1 | utla_name) + 
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+    
+    dynamic[["interventions_region"]] <-
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + nhser_name + 
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+  }
+
   dynamic[["interventions_random_region"]] <-
     dynamic_model(rt_mean | vreal(prop_variant) ~ tier +  (1 | utla_name) + nhser_name + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
+  if (!main_only) {
   dynamic[["interventions_time_region"]] <-
     dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
+  }
   
-  dynamic[["interventions_time_by_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
+  dynamic[["interventions_time_region_random"]] <-
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9) +
+                    (1 | utla_name) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
+  if (!main_only) {
+    dynamic[["interventions_time_by_region"]] <-
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+  }
+
   dynamic[["interventions_time_by_random_region"]] <-
     dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
                     (1 | utla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
-  dynamic[["interventions_independent_time_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name + 
-                    retail_and_recreation + grocery_and_pharmacy + 
-                    parks + transit_stations + workplaces + residential)
-  
-  dynamic[["interventions_independent_time_random_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name +
-                    (1 | utla_name) + 
-                    retail_and_recreation + grocery_and_pharmacy + 
-                    parks + transit_stations + workplaces + residential)
-  
+  if (!main_only) {
+    dynamic[["interventions_independent_time_region"]] <-
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name + 
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+    
+    dynamic[["interventions_independent_time_random_region"]] <-
+      dynamic_model(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name +
+                      (1 | utla_name) + 
+                      retail_and_recreation + grocery_and_pharmacy + 
+                      parks + transit_stations + workplaces + residential)
+  }
   return(list(models = list(static = static, dynamic = dynamic),
               data = list(static = static_data, dynamic = dynamic_data)))
 }
