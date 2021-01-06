@@ -57,7 +57,7 @@ compare_models <- function(file, type, models = NULL) {
 
   post <- lapply(fits$models[[type]],  function(x) {
     samples <- posterior_samples(x, "alpha")
-    q <- quantile(samples[, "alpha"], c(0.025, 0.5, 0.975))
+    q <- quantile(samples[, "alpha"] - 1, c(0.025, 0.5, 0.975))
     q <- round(q, 2)
     return(q)
   })
