@@ -18,7 +18,7 @@ ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
 add_var_student <- custom_family(
   "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
   links = c("log", "identity", "identity", "identity"),
-  vars = "f[N]",
+  vars = "f[n]",
   lb = c(NA, 0, 1, NA),
   type = "real"
 )
@@ -91,7 +91,7 @@ fit_models <- function(gt, data) {
   static <- list()
   static[["intercept"]] <- static_model(rt_mean ~ 1,
                                         prior = priors)
-  static[["region"]] <- static_model(rt_mean | vreal(prop_variant) ~ nhser_name,
+  static[["region"]] <- static_model(rt_mean ~ nhser_name,
                                      prior = c(priors,
                                                prior(student_t(3, 0, 0.5), class = "b")))
   
@@ -102,6 +102,7 @@ fit_models <- function(gt, data) {
                prior = c(priors,
                          prior(student_t(3, 0, 0.5), class = "b")),
                control = list(adapt_delta = 0.95, max_treedepth = 12),
+               stanvars = make_stanvars(dynamic_data),
                iter = iter, ...)
   }
   # fit models
