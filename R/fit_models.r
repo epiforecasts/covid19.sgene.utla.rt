@@ -39,7 +39,7 @@ priors <- c(prior(gamma(2, 0.1), class = nu),
 
 # Set up model ------------------------------------------------------------
 base_model <- function(form, iter = 2000, ...) {
-  make_stancode(formula = form,
+  brm(formula = form,
       family = add_var_student,
       stanvars = stanvars, 
       warmup = 500, iter = iter, ...)

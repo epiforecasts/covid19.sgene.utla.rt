@@ -16,4 +16,4 @@ Rscript R/fit_models.r
 Rscript R/compare_models.r
 
 # update report
-Rscript -e "render::rmarkdown('report.Rmd')"
+Rscript -e "rmarkdown::render('report.Rmd')"
