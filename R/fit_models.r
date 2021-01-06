@@ -7,7 +7,8 @@ library(brms)
 options(mc.cores = 4)
 
 # Get data ----------------------------------------------------------------
-utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds"))
+utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
+	filter(week_infection > "2020-10-01")
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
