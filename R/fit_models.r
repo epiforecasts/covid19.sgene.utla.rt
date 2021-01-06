@@ -105,17 +105,17 @@ fit_models <- function(gt, data) {
                     parks + transit_stations + workplaces + residential)
   
   dynamic[["interventions_time_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 10) + nhser_name + 
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
   dynamic[["interventions_time_by_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 10, by = nhser_name) + 
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
   dynamic[["interventions_time_by_random_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 10, by = nhser_name) + 
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
                     (1 | ltla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
