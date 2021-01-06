@@ -1,4 +1,4 @@
-Package: covid19.sgene.ltla.rt
+Package: covid19.sgene.utla.rt
 Version: 0.1.0
 Title: Local Area Reproduction Numbers and S-gene Dropouts
 Authors@R: c(

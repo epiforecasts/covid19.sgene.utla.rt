@@ -8,7 +8,6 @@ library(readr)
 library(janitor)
 
 # Extract data ---------------------------------------------------
-
 week_start <- 1
 
 old_tier_files <-
@@ -54,6 +53,7 @@ old_tiers <- old_tiers %>%
   filter(!is.na(utla)) %>%
   select(date, utla, tier)
 
+# Extract recent tiers ----------------------------------------------------
 new_tier_files <-
   list.files(here("data-raw", "tiers"), "^England_LAD")
 
@@ -78,6 +78,7 @@ new_tiers <- new_tiers %>%
   complete(date = seq(min(date), today(), by = "day"), utla = unique(utla)) %>%
   fill(tier, .direction = "down")
 
+# Join into single dataset ------------------------------------------------
 tiers <- bind_rows(old_tiers, new_tiers) %>%
   rename(utla_name = utla) %>%
   arrange(utla_name, date) %>%
