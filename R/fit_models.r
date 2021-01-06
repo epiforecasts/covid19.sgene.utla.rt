@@ -11,15 +11,15 @@ ltla_rt_with_covariates <- readRDS(here("data", "ltla_rt_with_covariates.rds"))
 
 # add small amount of noise to 0 measurement error
 ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
-  mutate(prop_variant_sd = ifelse(prop_variant_sd == 0, 1e-5, prop_variant_sd))
+  mutate(prop_variant = ifelse(prop_variant == 0, 1e-5, prop_variant),
+         prop_variant = ifelse(prop_variant == 1, prop_variant - 1e-5, prop_variant))
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
-  "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
-  links = c("log", "identity", "identity", "identity"),
-  lb = c(NA, 0, 1, NA),
-  type = "real",
-  vars = "vreal1[n]"
+  "add_var_student", dpars = c("mu", "sigma", "nu", "alpha", "f"),
+  links = c("log", "identity", "identity", "identity", "identity"),
+  lb = c(NA, 0, 1, NA, NA),
+  type = "real"
 )
 
 stan_funs <- "
@@ -33,10 +33,33 @@ real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
     return student_t_rng(nu, combined_mu, sigma);
   }
 "
-stanvars <- stanvar(block = "functions", scode = stan_funs)
+
+prop_variant <- "
+  f ~ beta_proportion(prop_variant, samples);
+"
+prop_variant_data <- "  
+  real prop_variant[N];
+  real samples[N];
+"
+
+make_stanvars <- function(data) {
+  stanvars <- c(stanvar(block = "functions", scode = stan_funs),
+                stanvar(block = "model", scode = prop_variant),
+                stanvar(block = "data",
+                        scode = "  real prop_variant[N];",
+                        x = data$prop_variant,
+                        name = "prop_variant"),
+                stanvar(block = "data",
+                        scode = "  real samples[N];",
+                        x = data$samples,
+                        name = "samples")
+  )
+  return(stanvars)
+}
+
 
 # Set up shared priors ----------------------------------------------------
-priors <- c(prior(gamma(2, .1), class = nu),
+priors <- c(prior(gamma(2, 0.1), class = nu),
             prior(student_t(3, 0, 0.5), class = alpha),
             prior(student_t(3, 0, 0.5), class = sigma))
 
@@ -44,7 +67,6 @@ priors <- c(prior(gamma(2, .1), class = nu),
 base_model <- function(form, iter = 2000, ...) {
   brm(formula = form,
       family = add_var_student,
-      stanvars = stanvars, 
       warmup = 500, iter = iter, ...)
 }
 
@@ -60,11 +82,12 @@ fit_models <- function(gt, data) {
   # set model settings and priors
   static_model <- function(form, ...) {
     base_model(form = form, data = static_data, 
-               control = list(adapt_delta = 0.95), ...)
+               control = list(adapt_delta = 0.95), 
+               stanvars = make_stanvars(static_data), ...)
   }
   # fit models
   static <- list()
-  static[["intercept"]] <- static_model(rt_mean | vreal(prop_variant) ~ 1,
+  static[["intercept"]] <- static_model(rt_mean ~ 1,
                                         prior = priors)
   static[["region"]] <- static_model(rt_mean | vreal(prop_variant) ~ nhser_name,
                                      prior = c(priors,
