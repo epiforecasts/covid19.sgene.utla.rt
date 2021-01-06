@@ -33,7 +33,7 @@ real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
 stanvars <- stanvar(block = "functions", scode = stan_funs)
 
 # Set up shared priors ----------------------------------------------------
-priors <- c(prior(gamma(2, .1), class = nu),
+priors <- c(prior(gamma(2, 0.1), class = nu),
             prior(student_t(3, 0, 0.5), class = alpha),
             prior(student_t(3, 0, 0.5), class = sigma))
 
