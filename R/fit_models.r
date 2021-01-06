@@ -22,11 +22,11 @@ add_var_student <- custom_family(
 stan_funs <- "
 real add_var_student_lpdf(real y, real mu, real sigma, real nu, real alpha,
                           real f) {
-    real combined_mu = (1 + alpha * f) * mu;
+    real combined_mu = (1 + (alpha - 1) * f) * mu;
     return student_t_lpdf(y | nu, combined_mu, sigma);
                             }
 real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
-    real combined_mu = (1 + alpha * f) * mu;
+    real combined_mu = (1 + (alpha - 1) * f) * mu;
     return student_t_rng(nu, combined_mu, sigma);
   }
 "
@@ -34,7 +34,7 @@ stanvars <- stanvar(block = "functions", scode = stan_funs)
 
 # Set up shared priors ----------------------------------------------------
 priors <- c(prior(gamma(2, 0.1), class = nu),
-            prior(student_t(3, 0, 0.5), class = alpha),
+            prior(lognormal(0, 1), class = alpha, lb = 0),
             prior(student_t(3, 0, 0.5), class = sigma))
 
 # Set up model ------------------------------------------------------------
