@@ -67,7 +67,7 @@ where $R_t$ is an UTLA-level intercept corresponding to R during national lockdo
 $$ R_{t, i} = (1 + \alpha s_{it}) R^+_{t, i} + s_{it} R^-_{t, i}$$
 where $R^-_{t, i}$ is the S-gene negative reproduction number of $R^+_{t, i}$ is the S-gene positive reproduction number.
 
-We used a Gaussian observation model with a single variance parameter. We fit a model to the latest week of data as a simple validation of our main analysis and also explored a range of comparable models with small variations in parametrisation. We also evaluated All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.ltla.rt/](https://github.com/epiforecasts/covid19.sgene.ltla.rt/).
+We used a Gaussian observation model with a single variance parameter. We fit a model to the latest week of data as a simple validation of our main analysis and also explored a range of comparable models with small variations in parametrisation. We also evaluated All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
 
 # Results
 
