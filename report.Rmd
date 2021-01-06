@@ -82,7 +82,7 @@ We found consistent evidence of an association between S-gene negativity and inc
 
 The best fitting model appeared to reproduce estimated reproduction numbers well (Figure 2). Alternative model parametrisations fit the data less well than those presented here whilst producing comparable effect size estimates.
 
-```{r r_vs_prop, echo=FALSE,fig.width=10, fig.height=10}
+```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 plot_rt <- function(rt_data) {
     ggplot(rt_data %>% filter(!is.na(prop_variant)),
   aes(x = prop_variant, y = rt_mean,
@@ -103,7 +103,6 @@ plot_rt <- function(rt_data) {
 suppressWarnings(plot_rt(short_rt))
 ```
 
-
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
     "*Figure 1: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
@@ -113,7 +112,7 @@ cat(sep = "",
     " represents one UTLA.*")
 ```
 
-```{r regression_coeffs, echo=FALSE}
+```{r regression_coeffs, echo = FALSE}
 st <- lapply(models,  function(x) {
   lapply(x$post, function(y) {
     paste0(y[2],  " (",  y[1],  "-",  y[3],  ")")
@@ -122,11 +121,11 @@ st <- lapply(models,  function(x) {
 
 full_models <-
   c(`Regional static` = "interventions_random_region",
-    `National time-varying` = "interventions_time_region",
+    `National time-varying` = "interventions_time_region_random",
     `Regional time-varying` = "interventions_time_by_random_region")
 ```
 
-```{r echo=FALSE, results='asis'}
+```{r echo = FALSE, results = 'asis'}
 lc <- loo_compare(models[["short"]]$loos[full_models])
 fn <- tibble(Model = names(full_models)[match(rownames(lc), full_models)],
              `ELPD difference` = round(lc[, "elpd_diff"], 2))
@@ -137,7 +136,7 @@ fn %>%
 *Table 1: Model comparison by difference in expected log-predictive density.*
 
 
-```{r regression_log_coeff_table, echo=FALSE, results='asis'}
+```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
 fn <- tibble(Model = names(full_models),
              `Estimate (short GT)` = unlist(st[["short"]][full_models]),
              `Estimate (long GT)` = unlist(st[["long"]][full_models]))
@@ -148,7 +147,7 @@ fn %>%
 ```
 *Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
 
-```{r fit, echo=FALSE}
+```{r fit, echo = FALSE}
 color_scheme_set("gray")
 
 p <- ppc_loo_intervals(
@@ -183,11 +182,11 @@ We found consistent evidence that S-gene negativity was associated with increase
 
 # Supplementary Information
 
-```{r r_vs_prop_long, echo=FALSE,fig.width=10, fig.height=10}
+```{r r_vs_prop_long, echo = FALSE,fig.width = 10, fig.height = 10}
 suppressWarnings(plot_rt(long_rt))
 ```
 
-```{r results='asis', echo = FALSE}
+```{r results = 'asis', echo = FALSE}
 cat(sep = "",
     "*Supplementary Figure 1: Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
     format(min(utla_rt$week_infection), "%d %B, %Y"),
@@ -196,7 +195,7 @@ cat(sep = "",
     " represents one UTLA.*")
 ```
 
-```{r long-fit, echo=FALSE}
+```{r long-fit, echo = FALSE}
 color_scheme_set("gray")
 
 p <- ppc_loo_intervals(
