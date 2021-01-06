@@ -7,11 +7,7 @@ library(brms)
 options(mc.cores = 4)
 
 # Get data ----------------------------------------------------------------
-ltla_rt_with_covariates <- readRDS(here("data", "ltla_rt_with_covariates.rds"))
-
-# add small amount of noise to 0 measurement error
-ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
-  mutate(prop_variant_sd = ifelse(prop_variant_sd == 0, 1e-5, prop_variant_sd))
+utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds"))
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -90,7 +86,7 @@ fit_models <- function(gt, data) {
                     parks + transit_stations + workplaces + residential)
   
   dynamic[["interventions_random"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + (1 | ltla_name) + 
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier + (1 | utla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
@@ -100,7 +96,7 @@ fit_models <- function(gt, data) {
                     parks + transit_stations + workplaces + residential)
   
   dynamic[["interventions_random_region"]] <-
-    dynamic_model(rt_mean | vreal(prop_variant) ~ tier +  (1 | ltla_name) + nhser_name + 
+    dynamic_model(rt_mean | vreal(prop_variant) ~ tier +  (1 | utla_name) + nhser_name + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
@@ -116,7 +112,7 @@ fit_models <- function(gt, data) {
   
   dynamic[["interventions_time_by_random_region"]] <-
     dynamic_model(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
-                    (1 | ltla_name) + 
+                    (1 | utla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
@@ -127,7 +123,7 @@ fit_models <- function(gt, data) {
   
   dynamic[["interventions_independent_time_random_region"]] <-
     dynamic_model(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name +
-                    (1 | ltla_name) + 
+                    (1 | utla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
@@ -138,7 +134,7 @@ fit_models <- function(gt, data) {
 # fit models
 gt <- c("short", "long")
 res <- lapply(gt, fit_models,
-              data = ltla_rt_with_covariates)
+              data = utla_rt_with_covariates)
 names(res) <- gt
 
 # Save fits ---------------------------------------------------------------

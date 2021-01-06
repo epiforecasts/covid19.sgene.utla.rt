@@ -25,7 +25,7 @@ rt_weekly <- rt %>%
 utla_rt <- sgene_by_utla %>%
   inner_join(rt_weekly, by = c("week_infection", "utla_name")) %>%
   select(week_infection, generation_time, nhser_name, utla_name, utla_code,
-         prop_variant, prop_variant_sd, samples, cases, rt_mean = mean, 
+         prop_variant, samples, cases, rt_mean = mean,
          rt_sd = sd) %>%
   mutate(time = as.numeric((week_infection - min(week_infection)) / 7))
 
