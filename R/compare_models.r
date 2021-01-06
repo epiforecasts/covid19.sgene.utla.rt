@@ -6,10 +6,10 @@ library(ggplot2)
 library(dplyr)
 library(here)
 
-options(mc.cores = 1)
+# use to set number of cores (defaults to 1)
+#options(mc.cores = 1)
 
 compare_models <- function(file, type, models = NULL) {
-
   ## Load fits ---------------------------------------------------------------
   fits <- readRDS(file)
   if (!is.null(models)) {
