@@ -7,7 +7,7 @@ library(lubridate)
 library(readr)
 library(janitor)
 
-# Download Rt estimates ---------------------------------------------------
+# Extract data ---------------------------------------------------
 
 week_start <- 1
 
@@ -104,13 +104,20 @@ mobility <- read_csv(mobility_file) %>%
   inner_join(ltla_utla, by = "laname") %>%
   rename(utla = match_utla) %>%
   right_join(utla_nhs, by = c("utla")) %>%
-  complete(date = unique(tiers$date), utla = unique(utla)) %>%
+  complete(date = seq(min(date, na.rm = TRUE), max(date, na.rm = TRUE), by = "day"), 
+	   utla = unique(utla), 
+	   variable = unique(variable)) %>%
+  filter(!is.na(date)) %>%
   group_by(date, nhs, variable) %>%
   mutate(median = median(value, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(value = if_else(is.na(value), median, value)) %>%
-  fill(value, .direction = "down") %>%
+  fill(value, .direction = "downup") %>%
   select(-nhs, -median) %>%
+  mutate(utla = if_else(utla %in% c("Cornwall", "Isles of Scilly"),
+                        "Cornwall and Isles of Scilly", utla),
+         utla = if_else(utla %in% c("Hackney", "City of London"),
+                        "Hackney and City of London", utla)) %>%
   mutate(week_infection = floor_date(date, "week", week_start)) %>%
   group_by(week_infection, utla_name = utla, variable) %>%
   summarise(value = mean(value), .groups = "drop") %>%
