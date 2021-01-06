@@ -34,30 +34,31 @@ long_rt <- utla_rt %>%
 
 ## Abstract
 
-**Background:** Local Covid-19 effective reproduction number (R) estimates have become increasingly heterogeneous since the introduction of the November national lockdown in England. This variation may be attributed to the spread of a novel Covid-19 variant. In this report we aim to investigate the changes in the proportion of positive cases that were S-gene negative, an indicator of the novel variant, and correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
+**Background:** Local Covid-19 effective reproduction number (R) estimates have become increasingly heterogeneous since the introduction of the November national lockdown in England. This variation may be attributed to the spread of a novel Covid-19 variant. In this report we aimed to investigate the changes in the proportion of positive cases that were S-gene negative, an indicator of the novel variant, and to correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
 
-**Method:** We explored the relationship between the proportion of samples that were S-gene negative and the effective reproduction number of test positive cases over time. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative effect of S-gene negativity. Models were compared using the expected log-predictive density.
+**Method:** We explored the relationship between the proportion of samples that were S-gene negative and the effective reproduction number (R) of test positive cases over time. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene negativity and weekly mean R. Models were compared using the expected log-predictive density.
 
-**Results:** We found evidence of an association between increased R and the proportion of S-gene dropouts across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that did not adjust for residual variation over time found a comparable effect to that reported elsewhere when a generation time with a mean of 5.5 days was used. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better and found that S-gene negativity was associated with a reduced, but still substantial, increase in R.
+**Results:** We found evidence of an association between increased mean R and the proportion of S-gene dropouts across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that did not adjust for residual variation over time found a comparable effect to that reported elsewhere when a generation time with a mean of 5.5 days was used. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better and found that S-gene negativity was associated with a reduced, but still substantial, increase in mean R.
 
 **Conclusions:** Our results indicate that even after adjusting for between NHS region residual variation over time S-gene negativity was associated with an increase in the effective reproduction number of Covid-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that NPI measures implemented between September and January 1st in England may not be sufficient to reduce the reproduction number below 1.
 
 # Method
 
-## Data 
+## Data
 
-We used 4 main sources of data: test positive upper-tier local authority Covid-19 notifications, S-gene status from PCR tests by local authority, Google mobility data stratified by context, and a database of non-pharmaceutical interventions (NPI).
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority, Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2].
 
 ## Statistical analysis
 
-We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2; @ganyani] or with a mean of 5.5 days (SD: 0.5), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using uncertain, gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2; @ganyani] or with a mean of 5.5 days (SD: 0.5 days), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
     "We then built a separate model of the expected reproduction number in ",
     "UTLA $i$ during week $t$ starting in the week beginning ",
     format(min(utla_rt$week_infection), "%d %B, %Y"),
-    ", as a function of local restrictions, mobility indicators, residual temporal variation, and ",
+    ", as a function of local restrictions, mobility indicators",
+    ", residual temporal variation, and ",
     "proportion of positive tests S-gene negative:")
 ```
 
@@ -152,7 +153,7 @@ color_scheme_set("gray")
 p <- ppc_loo_intervals(
   models[["short"]]$y,
   models[["short"]]$yrep[["interventions_time_by_random_region"]],
-  psis_object =  models[["short"]]$psis[["interventions_time_by_random_region"]], 
+  psis_object =  models[["short"]]$psis[["interventions_time_by_random_region"]],
   order = "median"
 )
 
@@ -187,7 +188,8 @@ suppressWarnings(plot_rt(long_rt))
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
-    "*Supplementary Figure 1: Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
+    "*Supplementary Figure 1: Mean reproduction numbers using a generation ",
+    "time with a mean of 5.5 days since the week beginning ",
     format(min(utla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point ",
@@ -200,7 +202,7 @@ color_scheme_set("gray")
 p <- ppc_loo_intervals(
   models[["long"]]$y,
   models[["long"]]$yrep[["interventions_time_by_random_region"]],
-  psis_object = models[["short"]]$psis[["interventions_time_by_random_region"]], 
+  psis_object = models[["short"]]$psis[["interventions_time_by_random_region"]],
   order = "median"
 )
 
