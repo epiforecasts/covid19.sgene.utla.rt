@@ -16,7 +16,7 @@ ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
 
 # exclude timepoints with low samples sizes (min 10 samples)
 ltla_rt_with_covariates <- ltla_rt_with_covariates %>% 
-  filter(samples >= 10)
+  filter(samples >= 500)
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -84,7 +84,7 @@ fit_models <- function(gt, data) {
   static_data <- dynamic_data %>% 
     filter(week_infection == max(week_infection))
   
-  ##Static model ------------------------------------------------------------
+  # Static model ------------------------------------------------------------
   # set model settings and priors
   static_model <- function(form, ...) {
     base_model(form = form, data = static_data, 
