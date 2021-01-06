@@ -14,7 +14,7 @@ utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) 
 add_var_student <- custom_family(
   "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
   links = c("log", "identity", "identity", "identity"),
-  lb = c(NA, 0, 1, NA),
+  lb = c(NA, 0, 1, 0),
   type = "real",
   vars = "vreal1[n]"
 )
@@ -34,12 +34,12 @@ stanvars <- stanvar(block = "functions", scode = stan_funs)
 
 # Set up shared priors ----------------------------------------------------
 priors <- c(prior(gamma(2, 0.1), class = nu),
-            prior(lognormal(0, 1), class = alpha, lb = 0),
+            prior(lognormal(0, 1), class = alpha),
             prior(student_t(3, 0, 0.5), class = sigma))
 
 # Set up model ------------------------------------------------------------
 base_model <- function(form, iter = 2000, ...) {
-  brm(formula = form,
+  make_stancode(formula = form,
       family = add_var_student,
       stanvars = stanvars, 
       warmup = 500, iter = iter, ...)
