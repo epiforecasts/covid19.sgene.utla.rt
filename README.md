@@ -26,8 +26,13 @@ devtools::install_deps()
 
 ### Code
 
+Rt estimates from the [EpiForecasts](http://epiforecasts.io/covid) web site can be updated using
 
-All publicly available data sources can be re-extracted using (here and following in the working directory of the analysis):
+```r
+source(here::here("R/extract_rt.r"))
+```
+
+All publicly available covariates can be re-extracted using (here and following in the working directory of the analysis):
 
 ```r
 source(here::here("R/extract_public_data.r"))
