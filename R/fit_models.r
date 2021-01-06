@@ -16,13 +16,15 @@ ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
-  "add_var_student", dpars = c("mu", "sigma", "nu", "alpha", "f"),
-  links = c("log", "identity", "identity", "identity", "identity"),
-  lb = c(NA, 0, 1, NA, NA),
+  "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
+  links = c("log", "identity", "identity", "identity"),
+  vars = "f[N]",
+  lb = c(NA, 0, 1, NA),
   type = "real"
 )
 
-stan_funs <- "
+make_stanvars <- function(data) {
+  stan_funs <- "
 real add_var_student_lpdf(real y, real mu, real sigma, real nu, real alpha,
                           real f) {
     real combined_mu = (1 + alpha * f) * mu;
@@ -33,18 +35,18 @@ real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
     return student_t_rng(nu, combined_mu, sigma);
   }
 "
-
-prop_variant <- "
+  
+  prop_variant <- "
   f ~ beta_proportion(prop_variant, samples);
 "
-prop_variant_data <- "  
+  prop_variant_data <- "  
   real prop_variant[N];
   real samples[N];
 "
-
-make_stanvars <- function(data) {
+  
   stanvars <- c(stanvar(block = "functions", scode = stan_funs),
                 stanvar(block = "model", scode = prop_variant),
+                stanvar(block = "parameters", scode = "  real<lower = 0, upper = 1> f[N];"),
                 stanvar(block = "data",
                         scode = "  real prop_variant[N];",
                         x = data$prop_variant,
