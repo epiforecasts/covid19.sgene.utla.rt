@@ -27,17 +27,3 @@ rt <- short_rt %>%
   select(generation_time, utla_name = region, date, everything(), -strat, -type)
 
 saveRDS(rt, here("data", "rt.rds"))
-
-
-# make data weekly
-week_start <- wday(max(rt$date))
-
-rt_weekly <- rt %>%
-  mutate(week_infection = floor_date(date, "week", week_start = week_start)) %>%
-  group_by(utla_name, week_infection, generation_time) %>%
-  summarise(mean = mean(mean), sd = mean(sd), n = n(), .groups = "drop") %>%
-  filter(n == 7) %>%
-  select(-n)
-
-saveRDS(rt_weekly, here("data", "rt_weekly.rds"))
-
