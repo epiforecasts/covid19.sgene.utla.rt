@@ -1,6 +1,6 @@
 ---
 title: "Local area reproduction numbers and S-gene target failure"
-subtitle: "Preliminary analysis - not peer reviewed"
+subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
 date: 6 January, 2020
@@ -45,6 +45,8 @@ long_rt <- utla_rt_cases %>%
    filter(generation_time %in% "long")
 ```
 
+For correspondence: sebastian.funk@lshtm.ac.uk
+
 ## Abstract
 
 **Background:** Local estimates of the time-varying effective reproduction number (Rt) of Covid-in England have become increasingly heterogeneous since the introduction of the November national lockdown in England. This variation may be attributed to the spread of a novel Covid-19 variant. In this report we aimed to investigate the changes in the proportion of positive cases that were S-gene negative ("S-gene target failure", SGTF), an indicator of the novel variant, and to correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
@@ -59,7 +61,7 @@ long_rt <- utla_rt_cases %>%
 
 ## Data
 
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority, Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2].
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority, Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
 
 ## Statistical analysis
 
@@ -214,7 +216,7 @@ We studied the relationship between SGTF (as a proxy for the new variant of conc
 
 Our estimates with the longer generation interval without adjusting for additional residual variation over time are comparable with ones from other modelling studies (both of which used a generation interval centred around 6.5 days, i.e. longer than our "long" interval) which were in the order of 50-74% [@davies2020] or 50-75% [@imperial42], if at the lower end of these estimates. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect. This may be a particular issue where the effect of the variant would cause the reproduction number to cross 1.
 
-Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene dropout observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between S-gene dropouts and the reproduction number.
+Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene dropout observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between S-gene dropouts and the reproduction number.
 
 We found consistent evidence that S-gene negativity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that NPI measures implemented since September in England may not be sufficient to reduce the reproduction number below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
 
