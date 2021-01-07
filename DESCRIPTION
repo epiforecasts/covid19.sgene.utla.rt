@@ -19,7 +19,8 @@ Imports: here,
   gt,
   rmarkdown,
   janitor,
-  tibble
+  tibble,
+  parallel
 Description: Local area reproduction numbers and S-gene dropouts.
 RoxygenNote: 7.1.0
 NeedsCompilation: no

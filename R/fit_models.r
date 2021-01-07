@@ -5,10 +5,8 @@ library(brms)
 library(parallel)
 
 # Options -----------------------------------------------------------------
-# used when parallel = TRUE
-numCores <- detectCores()
 # used internally to fit each model
-options(mc.cores = 1)
+options(mc.cores = detectCores())
 
 # Get data ----------------------------------------------------------------
 utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
@@ -61,7 +59,9 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   # set model settings and priors
   static_model <- function(form, ...) {
     base_model(form = form, data = static_data, 
-               control = list(adapt_delta = 0.95), ...)
+               control = list(adapt_delta = 0.95),
+               cores = ifelse(parallel, 1, getOption("mc.cores", 2L)),
+               ...)
   }
   # fit models
   static <- list()
