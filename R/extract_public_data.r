@@ -73,9 +73,11 @@ utla_nhs <- new_tiers %>%
   distinct()
 
 new_tiers <- new_tiers %>%
+  select(-nhs) %>%
   mutate(tier = if_else(tier == "National Lockdown", "national_lockdown",
                         paste0("tier_", tier))) %>%
   complete(date = seq(min(date), today(), by = "day"), utla = unique(utla)) %>%
+  arrange(utla, date) %>%
   fill(tier, .direction = "down")
 
 # Join into single dataset ------------------------------------------------
