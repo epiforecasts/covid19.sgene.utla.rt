@@ -18,9 +18,9 @@ utla_rt_with_covariates <- utla_rt_with_covariates %>%
   mutate(prop_variant = ifelse(prop_variant == 0, 1e-5, prop_variant),
          prop_variant = ifelse(prop_variant == 1, prop_variant - 1e-5, prop_variant))
 
-# exclude timepoints with low samples sizes (min 10 samples)
+# exclude timepoints with low samples sizes (min 100 samples)
 utla_rt_with_covariates <- utla_rt_with_covariates %>% 
-  filter(samples >= 500)
+  filter(samples >= 100)
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -94,9 +94,9 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   # fit models
   static <- list()
   if (!main_only) {
-    static[["intercept"]] <- static_model(rt_mean | vreal(prop_variant) ~ 1,
+    static[["intercept"]] <- static_model(rt_mean ~ 1,
                                           prior = priors)
-    static[["region"]] <- static_model(rt_mean | vreal(prop_variant) ~ nhser_name,
+    static[["region"]] <- static_model(rt_mean ~ nhser_name,
                                        prior = c(priors,
                                                  prior(student_t(3, 0, 0.5), class = "b")))
   }
@@ -115,63 +115,63 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   dynamic_models <- list()
   if (!main_only) {
     dynamic_models[["interventions_only"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier)
+      as.formula(rt_mean ~ tier)
     
     dynamic_models[["interventions"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier +
+      as.formula(rt_mean ~ tier +
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
     
     dynamic_models[["interventions_random"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier + (1 | utla_name) +
+      as.formula(rt_mean ~ tier + (1 | utla_name) +
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
     
     dynamic_models[["interventions_region"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier + nhser_name +
+      as.formula(rt_mean ~ tier + nhser_name +
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
   }
 
   dynamic_models[["interventions_random_region"]] <-
-    as.formula(rt_mean | vreal(prop_variant) ~ tier +  (1 | utla_name) + nhser_name +
+    as.formula(rt_mean ~ tier +  (1 | utla_name) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
   if (!main_only) {
   dynamic_models[["interventions_time_region"]] <-
-    as.formula(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9) + nhser_name +
+    as.formula(rt_mean ~ tier + s(time, k = 9) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   }
   
   dynamic_models[["interventions_time_region_random"]] <-
-    as.formula(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9) +
+    as.formula(rt_mean ~ tier + s(time, k = 9) +
                     (1 | utla_name) + nhser_name +
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
   if (!main_only) {
     dynamic_models[["interventions_time_by_region"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
+      as.formula(rt_mean ~ tier + s(time, k = 9, by = nhser_name) +
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
   }
 
   dynamic_models[["interventions_time_by_random_region"]] <-
-    as.formula(rt_mean | vreal(prop_variant) ~ tier + s(time, k = 9, by = nhser_name) +
+    as.formula(rt_mean ~ tier + s(time, k = 9, by = nhser_name) +
                     (1 | utla_name) + 
                     retail_and_recreation + grocery_and_pharmacy + 
                     parks + transit_stations + workplaces + residential)
   
   if (!main_only) {
     dynamic_models[["interventions_independent_time_region"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name +
+      as.formula(rt_mean ~ tier + factor(time):nhser_name +
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
     
     dynamic_models[["interventions_independent_time_random_region"]] <-
-      as.formula(rt_mean | vreal(prop_variant) ~ tier + factor(time):nhser_name +
+      as.formula(rt_mean ~ tier + factor(time):nhser_name +
                       (1 | utla_name) + 
                       retail_and_recreation + grocery_and_pharmacy + 
                       parks + transit_stations + workplaces + residential)
