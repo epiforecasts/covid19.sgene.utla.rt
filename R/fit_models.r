@@ -14,12 +14,12 @@ utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) 
 	filter(week_infection > "2020-10-01")
 
 # add small amount of noise to 0 measurement error
-ltla_rt_with_covariates <- ltla_rt_with_covariates %>%
+utla_rt_with_covariates <- utla_rt_with_covariates %>%
   mutate(prop_variant = ifelse(prop_variant == 0, 1e-5, prop_variant),
          prop_variant = ifelse(prop_variant == 1, prop_variant - 1e-5, prop_variant))
 
 # exclude timepoints with low samples sizes (min 10 samples)
-ltla_rt_with_covariates <- ltla_rt_with_covariates %>% 
+utla_rt_with_covariates <- utla_rt_with_covariates %>% 
   filter(samples >= 500)
 
 # Add custom family -------------------------------------------------------
@@ -39,7 +39,7 @@ real add_var_student_lpdf(real y, real mu, real sigma, real nu, real alpha,
     return student_t_lpdf(y | nu, combined_mu, sigma);
                             }
 real add_var_student_rng(real mu, real sigma, real nu, real alpha, real f) {
-    real combined_mu = (1 + (alpha -1) * f) * mu;
+    real combined_mu = (1 + (alpha - 1) * f) * mu;
     return student_t_rng(nu, combined_mu, sigma);
   }
 "
@@ -112,7 +112,6 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
                iter = iter, ...)
   }
   # fit models
-
   dynamic_models <- list()
   if (!main_only) {
     dynamic_models[["interventions_only"]] <-
