@@ -1,0 +1,116 @@
+utla_name,date,tier
+Barking and Dagenham,2020-10-17,tier_2
+Barnet,2020-10-17,tier_2
+Barnsley,2020-10-14,tier_2
+Barnsley,2020-10-24,tier_3
+Bexley,2020-10-17,tier_2
+Birmingham,2020-10-14,tier_2
+Blackburn with Darwen,2020-10-14,tier_2
+Blackburn with Darwen,2020-10-17,tier_3
+Blackpool,2020-10-14,tier_2
+Blackpool,2020-10-17,tier_3
+Bolton,2020-10-14,tier_2
+Bolton,2020-10-23,tier_3
+Bradford,2020-10-14,tier_2
+Brent,2020-10-17,tier_2
+Bromley,2020-10-17,tier_2
+Bury,2020-10-14,tier_2
+Bury,2020-10-23,tier_3
+Calderdale,2020-10-14,tier_2
+Camden,2020-10-17,tier_2
+Cheshire East,2020-10-14,tier_2
+Cheshire West and Chester,2020-10-14,tier_2
+Hackney and City of London,2020-10-17,tier_2
+County Durham,2020-10-14,tier_2
+Croydon,2020-10-17,tier_2
+Darlington,2020-10-14,tier_2
+Derbyshire,2020-10-17,tier_2
+Derbyshire,2020-10-18,tier_1
+Derbyshire,2020-10-18,tier_2
+Derbyshire,2020-10-19,tier_1
+Derbyshire,2020-10-19,tier_2
+Derbyshire,2020-10-20,tier_1
+Derbyshire,2020-10-20,tier_2
+Derbyshire,2020-10-21,tier_1
+Derbyshire,2020-10-21,tier_2
+Derbyshire,2020-10-22,tier_1
+Derbyshire,2020-10-22,tier_2
+Derbyshire,2020-10-23,tier_1
+Doncaster,2020-10-14,tier_2
+Doncaster,2020-10-24,tier_3
+Ealing,2020-10-17,tier_2
+Enfield,2020-10-17,tier_2
+Essex,2020-10-17,tier_2
+Gateshead,2020-10-14,tier_2
+Greenwich,2020-10-17,tier_2
+Hackney and City of London,2020-10-17,tier_2
+Halton,2020-10-14,tier_3
+Hammersmith and Fulham,2020-10-17,tier_2
+Haringey,2020-10-17,tier_2
+Harrow,2020-10-17,tier_2
+Hartlepool,2020-10-14,tier_2
+Havering,2020-10-17,tier_2
+Hillingdon,2020-10-17,tier_2
+Hounslow,2020-10-17,tier_2
+Islington,2020-10-17,tier_2
+Kensington and Chelsea,2020-10-17,tier_2
+Kingston upon Thames,2020-10-17,tier_2
+Kirklees,2020-10-14,tier_2
+Knowsley,2020-10-14,tier_3
+Lambeth,2020-10-17,tier_2
+Lancashire,2020-10-14,tier_2
+Lancashire,2020-10-17,tier_3
+Leeds,2020-10-14,tier_2
+Leicester,2020-10-14,tier_2
+Lewisham,2020-10-17,tier_2
+Liverpool,2020-10-14,tier_3
+Manchester,2020-10-14,tier_2
+Manchester,2020-10-23,tier_3
+Merton,2020-10-17,tier_2
+Middlesbrough,2020-10-14,tier_2
+Newcastle upon Tyne,2020-10-14,tier_2
+Newham,2020-10-17,tier_2
+North Tyneside,2020-10-14,tier_2
+Northumberland,2020-10-14,tier_2
+Nottingham,2020-10-14,tier_2
+Nottinghamshire,2020-10-14,tier_2
+Oldham,2020-10-14,tier_2
+Oldham,2020-10-23,tier_3
+Redbridge,2020-10-17,tier_2
+Redcar and Cleveland,2020-10-14,tier_2
+Richmond upon Thames,2020-10-17,tier_2
+Rochdale,2020-10-14,tier_2
+Rochdale,2020-10-23,tier_3
+Rotherham,2020-10-14,tier_2
+Rotherham,2020-10-24,tier_3
+Salford,2020-10-14,tier_2
+Salford,2020-10-23,tier_3
+Sandwell,2020-10-14,tier_2
+Sefton,2020-10-14,tier_3
+Sheffield,2020-10-14,tier_2
+Sheffield,2020-10-24,tier_3
+Solihull,2020-10-14,tier_2
+South Tyneside,2020-10-14,tier_2
+Southwark,2020-10-17,tier_2
+St. Helens,2020-10-14,tier_3
+Stockport,2020-10-14,tier_2
+Stockport,2020-10-23,tier_3
+Stockton-on-Tees,2020-10-14,tier_2
+Sunderland,2020-10-14,tier_2
+Sutton,2020-10-17,tier_2
+Tameside,2020-10-14,tier_2
+Tameside,2020-10-23,tier_3
+Tower Hamlets,2020-10-17,tier_2
+Trafford,2020-10-14,tier_2
+Trafford,2020-10-23,tier_3
+Wakefield,2020-10-14,tier_2
+Walsall,2020-10-14,tier_2
+Waltham Forest,2020-10-17,tier_2
+Wandsworth,2020-10-17,tier_2
+Warrington,2020-10-14,tier_2
+Westminster,2020-10-17,tier_2
+Wigan,2020-10-14,tier_2
+Wigan,2020-10-23,tier_3
+Wirral,2020-10-14,tier_3
+Wolverhampton,2020-10-14,tier_2
+York,2020-10-17,tier_2
