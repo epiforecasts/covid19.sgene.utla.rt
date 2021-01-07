@@ -77,4 +77,4 @@ res <- lapply(gt, function(x) {
 })
 names(res) <- gt
 
-saveRDS(res, here::here("output", "sgene_model_comparison.rds"))
+saveRDS(res, here("output", "sgene_model_comparison.rds"))
