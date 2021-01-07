@@ -5,7 +5,6 @@ library(brms)
 library(parallel)
 
 # Options -----------------------------------------------------------------
-# used internally to fit each model
 options(mc.cores = detectCores())
 
 # Get data ----------------------------------------------------------------
@@ -60,7 +59,6 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   static_model <- function(form, ...) {
     base_model(form = form, data = static_data, 
                control = list(adapt_delta = 0.95),
-               cores = ifelse(parallel, 1, getOption("mc.cores", 2L)),
                ...)
   }
   # fit models
