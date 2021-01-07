@@ -5,9 +5,10 @@ library(brms)
 library(parallel)
 
 # Options -----------------------------------------------------------------
-options(mc.cores = 4)
-
+# used when parallel = TRUE
 numCores <- detectCores()
+# used internally to fit each model
+options(mc.cores = 1)
 
 # Get data ----------------------------------------------------------------
 utla_rt_with_covariates <- readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
