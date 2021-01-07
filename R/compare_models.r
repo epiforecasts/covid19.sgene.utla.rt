@@ -5,6 +5,9 @@ library(loo)
 library(ggplot2)
 library(dplyr)
 library(here)
+library(parallel)
+
+options(mc.cores = detectCores())
 
 compare_models <- function(file, type, models = NULL) {
   ## Load fits ---------------------------------------------------------------
