@@ -70,8 +70,7 @@ make_stanvars <- function(data) {
 real variant_nb_lpmf(int y, real mu, real phi, real alpha,
                      real f, int cases) {
     real scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
-    real sqrt_phi = 1 / sqrt(phi);
-    return  neg_binomial_2_lpmf(y | scaled_cases, sqrt_phi);
+    return  neg_binomial_2_lpmf(y | scaled_cases, phi);
                             }
 real variant_nb_rng(int y, real mu, real phi, real alpha,
                     real f, int cases) {
