@@ -34,7 +34,8 @@ infections <- case_infs %>%
 # Define covariates -------------------------------------------------------
 # get variant proportion
 sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
-  drop_na(prop_variant)
+  drop_na(prop_variant) %>% 
+  filter(week_infection > "2020-10-01")
 
 # make infections weekly summary
 weekly_infections <- infections %>% 
@@ -97,38 +98,49 @@ priors <- c(prior(lognormal(0, 1), class = alpha))
 
 # define model function
 nb_model <- function(form, iter = 1500, data = deaths_with_cov, ...) {
-  message("Fitting: ", form)
+  message("Fitting: ", as.character(form))
   brm(formula = form,
       family = variant_nb,
       prior = priors,
       data,
       stanvars = make_stanvars(data),
-      control = list(adapt_delta = 0.9),
+      control = list(adapt_delta = 0.95),
       warmup = 500, iter = iter, ...)
 }
 # Fit models --------------------------------------------------------------
-fits <- list()
+models <- list()
 # define models to fit
-fits[["intercept"]] <- as.formula(deaths ~ 1)
-fits[["cases"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
-fits[["region"]] <- as.formula(deaths ~ region)
-fits[["time"]] <- as.formula(deaths ~ s(time, k = 9))
-fits[["utla"]] <- as.formula(deaths ~ (1 | utla))
-fits[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 9) + region + (1 | utla))
-fits[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 9) + region + (1 | utla))
+models[["intercept"]] <- as.formula(deaths ~ 1)
+models[["cases"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
+models[["region"]] <- as.formula(deaths ~ region)
+models[["time"]] <- as.formula(deaths ~ s(time, k = 9))
+models[["utla"]] <- as.formula(deaths ~ (1 | utla))
+models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
+models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
+models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
 
-#fit models
-options(mc.cores = ceiling(no_cores / length(fits)))
-fits <- mclapply(fits, nb_model, mc.cores = min(length(fits), no_cores))
+# core usage
+if (no_cores <= 4) { 
+  options(mc.cores = no_cores)
+  mc_cores <- 1
+}else{
+  options(mc.cores = ceiling(no_cores / length(fits)))
+  mc_cores <- min(length(fits), no_cores)
+  }
+# fit models
+fits <- list()
+fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores)
+fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, effect = "additive")
 
 # Variant effect ----------------------------------------------------------
-variant_effect <- lapply(fits,  function(x) {
+extract_variant_effect <- function(x) {  
   samples <- posterior_samples(x, "alpha")
   q <- quantile(samples[, "alpha"] - 1, c(0.025, 0.5, 0.975))
   q <- round(q, 2)
   return(q)
-})
-names(variant_effect) <- names(fits)
+}
+variant_effect <- list()
+variant_effect <- lapply(fits, lapply, extract_variant_effect)) 
 
 # Compare models ----------------------------------------------------------
 # requires custom log_lik functions to be implemented for variant_nb family
