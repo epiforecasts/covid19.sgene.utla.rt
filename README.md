@@ -1,7 +1,7 @@
 
 # Local area reproduction numbers and S-gene dropouts
 
-This repository contains the data and code for our report exploring the association between lower-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://github.com/epiforecasts/covid19.sgene.ltla.rt/report.pdf/).
+This repository contains the data and code for our report exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://github.com/epiforecasts/covid19.sgene.ltla.rt/report.pdf/).
 
 ## Reproducibility
 
