@@ -3,7 +3,7 @@ title: "Local area reproduction numbers and S-gene target failure"
 subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 6 January, 2020
+date: 8 January, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
@@ -30,19 +30,21 @@ library(covidregionaldata)
 utla_rt <- readRDS(here("data", "utla_rt_with_covariates.rds"))
 
 cases <- get_regional_data("UK", include_level_2_regions = TRUE) %>%
-	 filter(date >= min(utla_rt$week_infection) + 7) %>%
-	 mutate(week_infection = floor_date(date, "week", 1) - 7) %>%
-	 group_by(week_infection, utla_name = authority) %>%
-	 summarise(cases = sum(cases_new, na.rm = TRUE), .groups = "drop")
+  filter(date >= min(utla_rt$week_infection) + 7) %>%
+  mutate(week_infection = floor_date(date, "week", 1) - 7) %>%
+  group_by(week_infection, utla_name = authority) %>%
+  summarise(cases = sum(cases_new, na.rm = TRUE), .groups = "drop")
 
 utla_rt_cases <- utla_rt %>%
-	left_join(cases, by = c("week_infection", "utla_name")) %>%
-	filter(week_infection >= "2020-10-01")
+  left_join(cases, by = c("week_infection", "utla_name")) %>%
+  filter(week_infection >= "2020-10-01", !is.na(prop_sgtf))
 
 short_rt <- utla_rt_cases %>%
-   filter(generation_time %in% "short")
+  rename_with(~ sub(paste0("_short_gt"), "", .x)) %>%
+  filter(!is.na(rt_mean))
 long_rt <- utla_rt_cases %>%
-   filter(generation_time %in% "long")
+  rename_with(~ sub(paste0("_long_gt"), "", .x)) %>%
+  filter(!is.na(rt_mean))
 ```
 
 For correspondence: sebastian.funk@lshtm.ac.uk
@@ -61,7 +63,24 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 ## Data
 
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority, Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority (Fig. 1) provided by Public Health England (PHE)[@phe], Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
+
+```{r by_ltla, echo=FALSE, fig.width=30, fig.height=20}
+prop_data <- utla_rt_cases %>%
+  mutate(SGTF = prop_sgtf, Other = 1 - prop_sgtf) %>%
+  pivot_longer(c(SGTF, Other)) %>%
+  mutate(name = factor(name, c("SGTF", "Other")))
+ggplot(data = prop_data, mapping = aes(x = week_infection, y = value, fill = name)) +
+  facet_wrap( ~ utla_name) +
+  theme_cowplot() +
+  scale_fill_brewer("", palette = "Set1") +
+  xlab("Week") +
+  geom_bar(stat = "identity", position = "fill", na.rm = TRUE) +
+  ylab("Proportion cases tested") +
+  theme(strip.text.x = element_text(size = 10),
+        legend.position = "bottom")
+```
+*Figure 1: Proportion of test-positives that had a S-gene result reported which was S-gene positive/negative by LTLA and week of infection (assumed one week before test).*
 
 ## Statistical analysis
 
@@ -78,11 +97,11 @@ cat(sep = "",
 ```
 
 $$ R_{i,t} = \left(1 + \alpha f_{it}\right) \exp{\left( s(t) + \sum_j \beta_{j} T_{ijt} + \sum_k \gamma_{k} G_{ikt} + \log R_i \right)} $$
-where $R_t$ is an UTLA-level intercept corresponding to Rt during national lockdown in November, $T_{ijt}$ is 1 if intervention $j$ (out of: no tiers, tier 1/2/3) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, parks, workplace, etc.) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). The key parameter is $\alpha$, the relative change in reproduction number in the presence of the variant that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested that came back negative for the S-gene, and the reproduction number in any given UTLA is
+where $R_t$ is an UTLA-level intercept corresponding to Rt during national lockdown in November, $T_{ijt}$ is 1 if intervention $j$ (out of: no tiers, tier 1/2/3) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, parks, workplace, etc.) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). The key parameter is $\alpha$, the relative change in reproduction number in the presence of the SGTF that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested with SGTF, and the reproduction number in any given UTLA is
 $$ R_{t, i} = (1 - f_{it}) R^+_{t, i} +  f_{it} R^-_{t, i}$$
 where $R^-_{t, i}$ is the S-gene negative reproduction number, $R^+_{t, i}$ is the S-gene positive reproduction number, and it is assumed that $R^-_{t, i} = (1 + \alpha) R^+_{t, i}$
 
-We used a Gaussian observation model with a single variance parameter. All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
+We used a Student's t-distribution observation model with a single variance parameter and a single degrees of freedom parameter. All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
 
 # Results
 
@@ -93,15 +112,15 @@ effect_size <- function(gt, model, pos = 2) {
   paste0(models[[gt]]$post[[model]][pos] * 100,"%")
 }
 ```
-We found consistent evidence of an association between S-gene negativity and increased UTLA level reproduction number estimates. The association became more apparent over time from the middle of October through to the beginning of December (Figure 1) as the proportion of of tests that were S-gene negative increased heterogeneously across NHS regions. The association appeared to be both across NHS regions and within NHS regions. Models that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Table 1) but all models had evidence of increased Rt with S-gene negativity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` with a short generation time (Table 2), slightly higher but consistent with estimates from the models that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`), or a model that did not adjust for residual variation over time (lower bound: `r effect_size("long","interventions_random_region", 1)`. With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and`r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in Rt varied from `r effect_size("short","interventions_random_region", 3)` to `r effect_size("long","interventions_time_by_random_region", 3)` in models that fit the data comparably (but had different assumed generation times).
 
-The best fitting model appeared to reproduce estimated reproduction numbers well (Figure 2), although there are notable outliers in some of the weeks. Alternative model parametrisations fit the data less well than those presented here whilst producing comparable effect size estimates.
+We found consistent evidence of an association between S-gene negativity and increased UTLA level reproduction number estimates. The association became more apparent over time from the middle of October through to the beginning of December (Fig. 2) as the proportion of of tests that were S-gene negative increased heterogeneously across NHS regions. The association appeared to be both across NHS regions and within NHS regions. Models that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Table 1) but all models had evidence of increased Rt with S-gene negativity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` higher Rt of SGTF cases with a short generation time (Table 2), slightly higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("long","interventions_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and `r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in Rt varied from `r effect_size("short","interventions_time_random_region", 3)` to `r effect_size("long","interventions_random_region", 3)` in models that fit the data comparably (but had different assumed generation times).
+
+The best fitting model appeared to reproduce estimated reproduction numbers well over time (Fig. 3) although there are notable outliers in some of the weeks. Alternative model parametrisations fit the data less well than those presented here whilst producing comparable effect size estimates.
 
 ```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 plot_rt <- function(rt_data) {
-    ggplot(rt_data %>% filter(!is.na(prop_variant)),
-  aes(x = prop_variant, y = rt_mean,
-                   fill = nhser_name, size = cases)) +
+  ggplot(rt_data, aes(x = prop_sgtf, y = rt_mean,
+                      fill = nhser_name, size = cases)) +
   geom_jitter(pch = 21) +
   facet_wrap(. ~ week_infection) +
   scale_fill_brewer("", palette = "Set1") +
@@ -119,7 +138,7 @@ suppressWarnings(plot_rt(short_rt))
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
-    "*Figure 1: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
+    "*Figure 2: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
     format(min(utla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point",
@@ -163,7 +182,7 @@ fn %>%
 ```
 *Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
 
-```{r fit, echo = FALSE}
+```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
 ## calculate predicted intervals
 plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
 
@@ -172,14 +191,13 @@ plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95))
   psis <- models[[gt]]$psis[[model]]
   ## construct predicted quantiles
   data <- utla_rt_cases %>%
-            filter(generation_time == gt, !is.na(prop_variant)) %>%
             slice_tail(n = length(y))
   pred_int <- suppressWarnings(E_loo(
     x = yrep,
     psis_object = psis,
     type = "quantile",
     probs = quantiles
-  )$value) %>% 
+  )$value) %>%
   t() %>%
   `colnames<-`(quantiles) %>%
   as_tibble() %>%
@@ -200,25 +218,25 @@ plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95))
     ylab("Mean reproduction number") +
     theme_cowplot() +
     theme(axis.text.x = element_blank(),
-	  axis.text.y = element_blank(),
-	  axis.ticks = element_blank())
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank())
 
   print(p)
 }
 
 p <- plot_pred_int("short", "interventions_time_by_random_region")
 ```
-*Figure 2: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
+*Figure 3: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
 
 # Discussion
 
-We studied the relationship between SGTF (as a proxy for the new variant of concern) and the effective reproduction number using three related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model with region-specific splines fitted the best yielding central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in R with short and long generation interval, respectively. In principle this could be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-regions UTLA-level differences, yet we found the results consistent with the model that modelled all temporal variation as related to interventions, mobility and SGTF (central estimates: `r effect_size("short","interventions_random_region")` and `r effect_size("long","interventions_random_region")` increase with short and long generation interval, respectively). This model yielded a poorer fit to the data than the more flexible models that allowed for variation over time not ascribed to these factors.
+We studied the relationship between SGTF (as a proxy for the new variant of concern) and the effective reproduction number using three related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model with region-specific splines fitted the best yielding central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in R with short and long generation interval, respectively. In principle this could be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-regions UTLA-level differences. Indeed, the model that modelled all temporal variation as related to interventions, mobility and SGTF (central estimates: `r effect_size("short","interventions_random_region")` and `r effect_size("long","interventions_random_region")` increase with short and long generation interval, respectively). This model yielded a poorer fit to the data than the more flexible models that allowed for variation over time not ascribed to these factors, suggesting that it is affected by confounders not included in the model.
 
-Our estimates with the longer generation interval without adjusting for additional residual variation over time are comparable with ones from other modelling studies (both of which used a generation interval centred around 6.5 days, i.e. longer than our "long" interval) which were in the order of 50-74% [@davies2020] or 50-75% [@imperial42], if at the lower end of these estimates. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect. This may be a particular issue where the effect of the variant would cause the reproduction number to cross 1.
+Our estimates with the longer generation interval without adjusting for additional residual variation over time are consistent with ones from two other modelling studies using similar generation intervals (5.5 and 6.5 days, respectively), which were in the order of a 50-74% [@davies2020] or 50-75% [@imperial42] increase. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect. This may be a particular issue where the effect of the variant would cause the reproduction number to cross 1.
 
-Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene dropout observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between S-gene dropouts and the reproduction number.
+Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of SGTF observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between SGTF and the reproduction number.
 
-We found consistent evidence that S-gene negativity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that NPI measures implemented since September in England may not be sufficient to reduce the reproduction number below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
+We found consistent evidence that SGTF was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that NPI measures implemented since September in England may not be sufficient to reduce the reproduction number below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
 
 # References
 
@@ -240,7 +258,7 @@ cat(sep = "",
     " represents one UTLA.*")
 ```
 
-```{r long-fit, echo = FALSE}
+```{r long-fit, echo = FALSE,fig.width = 10, fig.height = 10}
 p <- plot_pred_int("long", "interventions_time_by_random_region")
 ```
 *Supplementary Figure 2: Predictions of the best fitting long generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*

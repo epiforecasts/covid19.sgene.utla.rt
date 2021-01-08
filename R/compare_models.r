@@ -5,6 +5,9 @@ library(loo)
 library(ggplot2)
 library(dplyr)
 library(here)
+library(parallel)
+
+options(mc.cores = detectCores())
 
 compare_models <- function(file, type, models = NULL) {
   ## Load fits ---------------------------------------------------------------
@@ -17,7 +20,7 @@ compare_models <- function(file, type, models = NULL) {
   filetype <- paste0(sub("\\.rds", "", filetype), "_", type)
 
   fit_data <- fits$data[[type]] %>%
-    filter(!is.na(prop_variant))
+    filter(!is.na(prop_sgtf))
 
   ## Add custom family functions ---------------------------------------------
   expose_functions(fits$models[[type]][[1]], vectorize = TRUE)
@@ -77,4 +80,4 @@ res <- lapply(gt, function(x) {
 })
 names(res) <- gt
 
-saveRDS(res, here::here("output", "sgene_model_comparison.rds"))
+saveRDS(res, here("output", "sgene_model_comparison.rds"))
