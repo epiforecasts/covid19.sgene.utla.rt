@@ -3,7 +3,7 @@ title: "Local area reproduction numbers and S-gene target failure"
 subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 7 January, 2020
+date: 8 January, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
@@ -40,9 +40,11 @@ utla_rt_cases <- utla_rt %>%
   filter(week_infection >= "2020-10-01", !is.na(prop_sgtf))
 
 short_rt <- utla_rt_cases %>%
-  rename_with(~ sub(paste0("_short_gt"), "", .x))
+  rename_with(~ sub(paste0("_short_gt"), "", .x)) %>%
+  filter(!is.na(rt_mean))
 long_rt <- utla_rt_cases %>%
-  rename_with(~ sub(paste0("_long_gt"), "", .x))
+  rename_with(~ sub(paste0("_long_gt"), "", .x)) %>%
+  filter(!is.na(rt_mean))
 ```
 
 For correspondence: sebastian.funk@lshtm.ac.uk
