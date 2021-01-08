@@ -14,8 +14,8 @@ mobility <- readRDS(here("data", "mobility.rds"))
 # Combine data sources ----------------------------------------------------
 utla_rt <- sgene_by_utla %>%
   inner_join(rt_weekly, by = c("week_infection", "utla_name")) %>%
-  select(week_infection, generation_time, nhser_name, utla_name, utla_code,
-         prop_variant, samples, rt_mean = mean) %>%
+  select(week_infection, nhser_name, utla_name, utla_code,
+         prop_sgtf, samples, starts_with("rt_")) %>%
   mutate(time = as.numeric((week_infection - min(week_infection)) / 7))
 
 tiers <- tiers %>%
