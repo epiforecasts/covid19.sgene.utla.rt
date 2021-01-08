@@ -49,7 +49,7 @@ weekly_infections <- infections %>%
 deaths_with_cov <- weekly_infections %>% 
   inner_join(sgene_by_utla, by = c("week_infection", "utla_name")) %>% 
   select(utla = utla_name, week_infection, region = nhser_name, 
-         deaths, cases, prop_variant, samples)
+         deaths, cases, prop_sgtf, samples)
 
 # make normalised predictors
 deaths_with_cov <- deaths_with_cov %>% 
@@ -67,24 +67,37 @@ deaths_with_cov <- deaths_with_cov %>%
 # leading to:
 # D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C 
 # define custom negative binomial family including variant factor and cases
-variant_nb <- custom_family(
-  "variant_nb", dpars = c("mu", "phi", "alpha"),
-  links = c("logit", "log", "identity"),
-  lb = c(0, 0, 0),
-  type = "int",
-  vars = c("f[n]", "cases[n]")
-)
+variant_nb <- function(additive = FALSE) {
+  custom_family(
+    "variant_nb", dpars = c("mu", "phi", "alpha"),
+    links = c("logit", "log", "identity"),
+    lb = c(0, 0, ifelse(!additive, 0, -1)),
+    type = "int",
+    vars = c("f[n]", "cases[n]", "effect[1]")
+  )
+}
+
 # define stan code to scale cfr by cases and variant fraction
 make_stanvars <- function(data, additive = FALSE) {
   stan_funs <- "
 real variant_nb_lpmf(int y, real mu, real phi, real alpha,
-                     real f, int cases) {
-    real scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+                     real f, int cases, int effect) {
+    real scaled_cases;
+    if (effect) {
+      scaled_cases = (mu + alpha * f) * cases;
+    }else {
+      scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+    }
     return  neg_binomial_2_lpmf(y | scaled_cases, phi);
                             }
 real variant_nb_rng(int y, real mu, real phi, real alpha,
-                    real f, int cases) {
-    real scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+                    real f, int cases, int effect) {
+    real scaled_cases;
+    if (effect) {
+      scaled_cases = (mu + alpha * f) * cases;
+    }else {
+      scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+    }
     return  neg_binomial_2_rng(scaled_cases, phi);
                             }
 "
@@ -96,21 +109,30 @@ real variant_nb_rng(int y, real mu, real phi, real alpha,
                 stanvar(block = "data",
                         scode = "  int cases[N];",
                         x = data$cases,
-                        name = "cases")
+                        name = "cases"),
+                stanvar(block = "data",
+                        scode = "  int effect[1];",
+                        x = array(as.numeric(additive)),
+                        name = "effect")
   )
   return(stanvars)
 }
-# define priors
-priors <- c(prior(lognormal(0, 1), class = alpha))
 
 # define model function
-nb_model <- function(form, iter = 1500, data = deaths_with_cov, ...) {
+nb_model <- function(form, iter = 1500, data = deaths_with_cov,
+                     additive = FALSE, ...) {
+  # define priors
+  if (additive) {
+    priors <- c(prior(normal(0, 1), class = alpha))
+  }else{
+    priors <- c(prior(lognormal(0, 1), class = alpha))
+  }
   message("Fitting: ", as.character(form))
   brm(formula = form,
-      family = variant_nb,
+      family = variant_nb(additive = additive),
       prior = priors,
       data,
-      stanvars = make_stanvars(data),
+      stanvars = make_stanvars(data, additive = additive),
       control = list(adapt_delta = 0.95),
       warmup = 500, iter = iter, ...)
 }
@@ -131,23 +153,26 @@ if (no_cores <= 4) {
   options(mc.cores = no_cores)
   mc_cores <- 1
 }else{
-  options(mc.cores = ceiling(no_cores / length(fits)))
-  mc_cores <- min(length(fits), no_cores)
-  }
+  options(mc.cores = ceiling(no_cores / length(models)))
+  mc_cores <- min(length(models), no_cores)
+}
 # fit models
 fits <- list()
 fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores)
-fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, effect = "additive")
+fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, additive = TRUE)
 
 # Variant effect ----------------------------------------------------------
-extract_variant_effect <- function(x) {  
+extract_variant_effect <- function(x, additive = FALSE) {  
   samples <- posterior_samples(x, "alpha")
-  q <- quantile(samples[, "alpha"] - 1, c(0.025, 0.5, 0.975))
+  q <- samples[, "alpha"]
+  q <- ifelse(!additive, q - 1, q)
+  q <- quantile(q, c(0.025, 0.5, 0.975))
   q <- round(q, 2)
   return(q)
 }
 variant_effect <- list()
-variant_effect <- lapply(fits, lapply, extract_variant_effect)) 
+variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect) 
+variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE) 
 
 # Compare models ----------------------------------------------------------
 # requires custom log_lik functions to be implemented for variant_nb family
