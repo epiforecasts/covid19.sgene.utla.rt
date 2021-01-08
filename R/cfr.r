@@ -34,7 +34,7 @@ infections <- case_infs %>%
 # Define covariates -------------------------------------------------------
 # get variant proportion
 sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
-  drop_na(prop_variant) %>% 
+  drop_na(prop_sgtf) %>% 
   filter(week_infection > "2020-10-01")
 
 # make infections weekly summary
@@ -59,6 +59,13 @@ deaths_with_cov <- deaths_with_cov %>%
          time = (time - mean(time)) / sd(time))
 
 # Define model ------------------------------------------------------------
+# D = c^{+}(1-f)C + c^{-}fC
+# where c is the CFR, f is the fraction of cases that are sgtf, C is the number
+# of cases by date of infection, and D is the number of deaths by date of infection
+# effect of the variant on the CFR is assumed to be:
+# c^{-} = \alpha c^{+} or c^{-} = \alpha + c^{+}
+# leading to:
+# D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C 
 # define custom negative binomial family including variant factor and cases
 variant_nb <- custom_family(
   "variant_nb", dpars = c("mu", "phi", "alpha"),
@@ -68,7 +75,7 @@ variant_nb <- custom_family(
   vars = c("f[n]", "cases[n]")
 )
 # define stan code to scale cfr by cases and variant fraction
-make_stanvars <- function(data) {
+make_stanvars <- function(data, additive = FALSE) {
   stan_funs <- "
 real variant_nb_lpmf(int y, real mu, real phi, real alpha,
                      real f, int cases) {
@@ -84,7 +91,7 @@ real variant_nb_rng(int y, real mu, real phi, real alpha,
   stanvars <- c(stanvar(block = "functions", scode = stan_funs),
                 stanvar(block = "data",
                         scode = "  real f[N];",
-                        x = data$prop_variant,
+                        x = data$prop_sgtf,
                         name = "f"),
                 stanvar(block = "data",
                         scode = "  int cases[N];",
