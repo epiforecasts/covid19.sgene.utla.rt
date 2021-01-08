@@ -1,6 +1,6 @@
 Package: covid19.sgene.utla.rt
 Version: 0.1.0
-Title: Local Area Reproduction Numbers and S-gene Dropouts
+Title: Local Area Reproduction Numbers and S-gene Target Failure
 Authors@R: c(
   person("Sebastian", "Funk", email = "sebastian.funk@lshtm.ac.uk", role = c("aut", "cre")),
   person("Sam", "Abbott", email = "sam.abbott@lshtm.ac.uk", role = c("aut")))
@@ -24,7 +24,7 @@ Imports: here,
   covidregionaldata
 Remotes:
   epiforecasts/covidregionaldata,
-Description: Local area reproduction numbers and S-gene dropouts.
+Description: Local area reproduction numbers and S-gene target failure.
 RoxygenNote: 7.1.0
 NeedsCompilation: no
 Language: en-GB
