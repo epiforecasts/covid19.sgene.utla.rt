@@ -5,8 +5,10 @@ library(tidyr)
 library(vroom)
 library(lubridate)
 library(brms)
+library(parallel)
 
-options(mc.cores = 4)
+# set number of parallel cores
+no_cores <- detectCores()
 
 # Data --------------------------------------------------------------------
 # get raw cases by data of infection from epiforecasts.io 
@@ -108,14 +110,16 @@ nb_model <- function(form, iter = 1500, data = deaths_with_cov, ...) {
 fits <- list()
 # define models to fit
 fits[["intercept"]] <- as.formula(deaths ~ 1)
-fits[["cases"]] <- as.formula(deaths ~ normalised_cases)
+fits[["cases"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
 fits[["region"]] <- as.formula(deaths ~ region)
 fits[["time"]] <- as.formula(deaths ~ s(time, k = 9))
 fits[["utla"]] <- as.formula(deaths ~ (1 | utla))
-fits[["all"]] <- as.formula(deaths ~ normalised_cases + s(time, k = 9) + region + (1 | utla))
+fits[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 9) + region + (1 | utla))
+fits[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 9) + region + (1 | utla))
 
 #fit models
-fits <- lapply(fits, nb_model)
+options(mc.cores = ceiling(no_cores / length(fits)))
+fits <- mclapply(fits, nb_model, mc.cores = min(length(fits), no_cores))
 
 # Variant effect ----------------------------------------------------------
 variant_effect <- lapply(fits,  function(x) {
