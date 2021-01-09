@@ -71,7 +71,7 @@ variant_nb <- function(additive = FALSE) {
   custom_family(
     "variant_nb", dpars = c("mu", "phi", "alpha"),
     links = c("logit", "log", "identity"),
-    lb = c(0, 0, ifelse(!additive, 0, -1)),
+    lb = c(0, 0, ifelse(!additive, 0, NA)),
     type = "int",
     vars = c("f[n]", "cases[n]", "effect[1]")
   )
@@ -165,7 +165,9 @@ fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, additive =
 extract_variant_effect <- function(x, additive = FALSE) {  
   samples <- posterior_samples(x, "alpha")
   q <- samples[, "alpha"]
-  q <- ifelse(!additive, q - 1, q)
+  if (!additive) {
+    q <- q - 1
+  }
   q <- quantile(q, c(0.025, 0.5, 0.975))
   q <- signif(q, 2)
   return(q)
