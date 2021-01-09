@@ -167,7 +167,7 @@ extract_variant_effect <- function(x, additive = FALSE) {
   q <- samples[, "alpha"]
   q <- ifelse(!additive, q - 1, q)
   q <- quantile(q, c(0.025, 0.5, 0.975))
-  q <- round(q, 2)
+  q <- signif(q, 2)
   return(q)
 }
 variant_effect <- list()
