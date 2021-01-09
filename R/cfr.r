@@ -6,6 +6,7 @@ library(vroom)
 library(lubridate)
 library(brms)
 library(parallel)
+library(loo)
 
 # set number of parallel cores
 no_cores <- detectCores()
@@ -123,7 +124,7 @@ nb_model <- function(form, iter = 1500, data = deaths_with_cov,
                      additive = FALSE, ...) {
   # define priors
   if (additive) {
-    priors <- c(prior(normal(0, 1), class = alpha))
+    priors <- c(prior(normal(0, 0.01), class = alpha))
   }else{
     priors <- c(prior(lognormal(0, 1), class = alpha))
   }
@@ -161,7 +162,7 @@ fits <- list()
 fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores)
 fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, additive = TRUE)
 
-# Variant effect ----------------------------------------------------------
+# variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {  
   samples <- posterior_samples(x, "alpha")
   q <- samples[, "alpha"]
@@ -178,3 +179,48 @@ variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effec
 
 # Compare models ----------------------------------------------------------
 # requires custom log_lik functions to be implemented for variant_nb family
+expose_functions(fits[[1]][[1]], vectorize = TRUE)
+
+log_lik_variant_nb <- function(i, prep) {
+  mu <- prep$dpars$mu[, i]
+  phi <- prep$dpars$phi
+  alpha <- prep$dpars$alpha
+  f <- prep$data$f[i]
+  y <- prep$data$Y[i]
+  cases <- prep$data$cases[i]
+  effect <- prep$data$effect[1]
+  variant_nb_lpmf(y, mu, phi, alpha, f, cases, effect)
+}
+
+posterior_predict_variant_nb <- function(i, prep, ...) {
+  mu <- prep$dpars$mu[, i]
+  phi <- prep$dpars$phi
+  alpha <- prep$dpars$alpha
+  f <- prep$data$f[i]
+  y <- prep$data$Y[i]
+  cases <- prep$data$cases[i]
+  effect <- prep$data$effect[1]
+  variant_nb_rng(mu, phi, alpha, f, cases, effect)
+}
+
+options(mc.cores = no_cores)
+loos <- list()
+add_loo <- function(fits) {
+  fits %>% 
+    lapply(add_criterion, "loo") %>%
+    lapply(loo, save_psis = TRUE)
+}
+loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
+loos[["additive"]] <- add_loo(fits[["additive"]])
+lc <- list()
+lc[["additive"]] <- loo_compare(loos[["additive"]])
+lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
+
+# Save results ------------------------------------------------------------
+output <- list()
+output$fits <- fits
+output$effect <- variant_effect
+output$loos <- loos
+output$lc <- lc
+
+saveRDS(output, here("output", "cfr.rds"))
