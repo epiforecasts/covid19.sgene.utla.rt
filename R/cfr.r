@@ -120,7 +120,7 @@ real variant_nb_rng(int y, real mu, real phi, real alpha,
 }
 
 # define model function
-nb_model <- function(form, iter = 1500, data = deaths_with_cov,
+nb_model <- function(form, iter = 2000, data = deaths_with_cov,
                      additive = FALSE, ...) {
   # define priors
   if (additive) {
@@ -134,8 +134,8 @@ nb_model <- function(form, iter = 1500, data = deaths_with_cov,
       prior = priors,
       data,
       stanvars = make_stanvars(data, additive = additive),
-      control = list(adapt_delta = 0.95),
-      warmup = 500, iter = iter, ...)
+      control = list(adapt_delta = 0.98),
+      warmup = 1000, iter = iter, ...)
 }
 # Fit models --------------------------------------------------------------
 models <- list()
