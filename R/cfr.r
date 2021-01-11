@@ -126,7 +126,7 @@ nb_model <- function(form, iter = 2000, data = deaths_with_cov,
   if (additive) {
     priors <- c(prior(normal(0, 0.01), class = alpha))
   }else{
-    priors <- c(prior(lognormal(0, 1), class = alpha))
+    priors <- c(prior(lognormal(0, 0.5), class = alpha))
   }
   message("Fitting: ", as.character(form))
   brm(formula = form,
@@ -134,7 +134,7 @@ nb_model <- function(form, iter = 2000, data = deaths_with_cov,
       prior = priors,
       data,
       stanvars = make_stanvars(data, additive = additive),
-      control = list(adapt_delta = 0.98),
+      control = list(adapt_delta = 0.99),
       warmup = 1000, iter = iter, ...)
 }
 # Fit models --------------------------------------------------------------
@@ -145,7 +145,7 @@ models[["cases"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
 models[["region"]] <- as.formula(deaths ~ region)
 models[["time"]] <- as.formula(deaths ~ s(time, k = 9))
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
-models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
+models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + region + (1 | utla))
 models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
 models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
 
@@ -154,13 +154,15 @@ if (no_cores <= 4) {
   options(mc.cores = no_cores)
   mc_cores <- 1
 }else{
-  options(mc.cores = ceiling(no_cores / length(models)))
-  mc_cores <- min(length(models), no_cores)
+  options(mc.cores = 4)
+  mc_cores <- ceiling(no_cores / 4) 
 }
 # fit models
 fits <- list()
-fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores)
-fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, additive = TRUE)
+fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores,
+                                     mc.preschedule = FALSE)
+fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, 
+                               mc.preschedule = FALSE, additive = TRUE)
 
 # variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {  
@@ -213,8 +215,8 @@ add_loo <- function(fits) {
 loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
 loos[["additive"]] <- add_loo(fits[["additive"]])
 lc <- list()
-lc[["additive"]] <- loo_compare(loos[["additive"]])
 lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
+lc[["additive"]] <- loo_compare(loos[["additive"]])
 
 # Save results ------------------------------------------------------------
 output <- list()
