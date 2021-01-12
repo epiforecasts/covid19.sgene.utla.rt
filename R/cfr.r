@@ -224,6 +224,7 @@ lc[["all"]] <- loo_compare(all_loos)
   
 # Save results ------------------------------------------------------------
 output <- list()
+output$data <- deaths_with_cov
 output$fits <- fits
 output$effect <- variant_effect
 output$loos <- loos
