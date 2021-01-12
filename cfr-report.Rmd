@@ -3,7 +3,7 @@ title: "Association between S-gene target failure and the case fatality rate of 
 subtitle: "Preliminary analysis - not yet peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 8 January, 2021
+date: 12 January, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
@@ -23,6 +23,9 @@ library(tibble)
 library(brms)
 library(bayesplot)
 library(gt)
+library(stringr)
+library(purrr)
+library(scales)
 
 cfr <- readRDS(here("output", "cfr.rds"))
 ```
@@ -37,7 +40,7 @@ Explore the association between S-gene target failure and the case fatality rate
 
 ## Data
 
-We used 3 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe], Google mobility data stratified by context [@google], and two publicly available data bases of of non-pharmaceutical interventions by UTLA [@tiers1,@tiers2]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
+We used 3 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
 
 ## Statistical analysis
 
@@ -48,10 +51,10 @@ We assumed that the observed number of Covid-19 deaths ($D$) within 28 days by d
 $$D_{i,t} \sim \mathrm{NB}\left(c^{+}\left(1-f_{it}\right)C_{i,t} + c^{-}f_{it}C_{i,t},  \phi \right)$$
 where $i$ indicates UTLA, $t$ week of infection, and $f_{it}$ is the fraction of cases that were found to be S-gene negative by UTLA each week. The case fatality rate of S-gene negative cases then assumed was then assumed to be a function of static local variation, normalised Covid-19 notifications by date of infection, and residual temporal variation.
 
-$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_i + \beta C_{i,t} + s(t) \right) $$
-where $\gamma_i$ is a UTLA-level intercept corresponding to the baseline case fatality rate, $\beta$ is the contribution of case load (represented by normalised notifications by date of infection), and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"). 
+$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_i + \beta C_{i,t} + s(t) \right)$$
+where $\gamma_i$ is a UTLA-level intercept corresponding to the baseline case fatality rate, $\beta$ is the contribution of case load (represented by normalised notifications by date of infection), and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline, the sum of a static regional parameter and a national spline. 
 
-The S-gene negative case fatality rate was then assumed to be related to the S-gene positive case fatality rate via a multiplicative relatonship,
+The S-gene negative case fatality rate was then assumed to be related to the S-gene positive case fatality rate via a multiplicative relationship,
 
 $$c^{-} = \alpha c^{+}$$ 
 
@@ -59,7 +62,7 @@ or an additive relationship
 
 $$c^{-} = \alpha + c^{+}$$
 
-where $\alpha$ represents either the multiplicative change in case fatality rate of the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.  
+where $\alpha$ represents either the multiplicative change in case fatality rate or the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.  
 
 All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
 
@@ -70,10 +73,6 @@ effect_size <- function(type = "additive", model = "all", pos = 2, effects = cfr
   paste0(effects[[type]][[model]][pos] * 100,"%")
 }
 ```
-
-We found consistent evidence of an association between S-gene negativity and increased UTLA level reproduction number estimates. The association became more apparent over time from the middle of October through to the beginning of December (Fig. 2) as the proportion of of tests that were S-gene negative increased heterogeneously across NHS regions. The association appeared to be both across NHS regions and within NHS regions. Models that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Table 1) but all models had evidence of increased Rt with S-gene negativity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` higher Rt of SGTF cases with a short generation time (Table 2), slightly higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("long","interventions_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and `r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in Rt varied from `r effect_size("short","interventions_time_random_region", 3)` to `r effect_size("long","interventions_random_region", 3)` in models that fit the data comparably (but had different assumed generation times).
-
-The best fitting model appeared to reproduce estimated reproduction numbers well over time (Fig. 3) although there are notable outliers in some of the weeks. Alternative model parametrisations fit the data less well than those presented here whilst producing comparable effect size estimates.
 
 ```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 prop_data <- cfr$data %>% 
@@ -94,131 +93,56 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
         legend.box = "vertical"))
 ```
 
-```{r results='asis', echo = FALSE}
-cat(sep = "",
-    "*Figure 2: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
-    format(min(utla_rt$week_infection), "%d %B, %Y"),
-    ", compared to the proportion of all test-positives tested for S-gene",
-    " that tested S-gene positive/negative that week. Each point",
-    " represents one UTLA, with the size given by the number of cases in the week",
-    " following the week of the given reproduction number to account for the delay",
-    " from infection to testing.*")
-```
-
-```{r regression_coeffs, echo = FALSE}
-st <- lapply(models,  function(x) {
-  lapply(x$post, function(y) {
-    paste0(y[2],  " (",  y[1],  "-",  y[3],  ")")
-  })
-})
-
-full_models <-
-  c(`Regional static` = "interventions_random_region",
-    `National time-varying` = "interventions_time_region_random",
-    `Regional time-varying` = "interventions_time_by_random_region")
-```
+*Figure 1: Proportion with S gene dropped compared to the adjusted case fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
 
 ```{r echo = FALSE, results = 'asis'}
-lc <- loo_compare(models[["long"]]$loos[full_models])
-fn <- tibble(Model = names(full_models)[match(rownames(lc), full_models)],
-             `ELPD difference` = round(lc[, "elpd_diff"], 2))
-fn %>%
+lc <- tibble(model = names(cfr$lc[["all"]][, 1]), `ELPD difference` = round(cfr$lc[["all"]][, "elpd_diff"], 2)) %>% 
+  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
+         model = str_replace_all(model, "_additive", "") %>% 
+           str_replace_all("_multiplictive", "")) %>% 
+  mutate(pretty_model =  str_replace_all(model, "_", " ")%>% 
+           str_to_sentence(),
+         Type = type %>% 
+           str_to_sentence()) %>% 
+  mutate(pretty_model = case_when(
+    pretty_model == "All" ~ "All covariates",
+    pretty_model == "All with residuals" ~ "All covariates with national time-varying",
+    pretty_model == "All with regional residuals" ~ "All covariates with regional time-varying", 
+    pretty_model == "Utla" ~ "UTLA",
+    TRUE ~ pretty_model
+  )) %>% 
+  select(Type, type, pretty_model, model, `ELPD difference`)
+  
+lc %>%
+  select(Type, Model = pretty_model, `ELPD difference`) %>% 
   kbl() %>%
   kable_styling()
 ```
-*Table 1: Model comparison (long generation interval) by difference in expected log-predictive density.*
+*Table 1: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
 
 
 ```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
-fn <- tibble(Model = names(full_models),
-             `Estimate (short GT)` = unlist(st[["short"]][full_models]),
-             `Estimate (long GT)` = unlist(st[["long"]][full_models]))
+to_per <- function(var) {
+  paste0(var * 100, "%")
+}
+effects <- lc %>% 
+  select(- `ELPD difference`) %>% 
+  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
+         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>% 
+  select(-model, -type) %>% 
+  pivot_wider(names_from = Type, values_from = effect) %>% 
+  rename(Model = pretty_model)
 
-fn %>%
+effects %>%
   kbl() %>%
   kable_styling()
 ```
-*Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
-
-```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
-## calculate predicted intervals
-plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
-
-  y <- models[[gt]]$y
-  yrep <- models[[gt]]$yrep[[model]]
-  psis <- models[[gt]]$psis[[model]]
-  ## construct predicted quantiles
-  data <- utla_rt_cases %>%
-            slice_tail(n = length(y))
-  pred_int <- suppressWarnings(E_loo(
-    x = yrep,
-    psis_object = psis,
-    type = "quantile",
-    probs = quantiles
-  )$value) %>%
-  t() %>%
-  `colnames<-`(quantiles) %>%
-  as_tibble() %>%
-  bind_cols(y = y) %>%
-  bind_cols(data) %>%
-  arrange(`0.5`) %>%
-  group_by(week_infection) %>%
-  mutate(id = 1:n()) %>%
-  ungroup()
-
-  p <- ggplot(pred_int, aes(x = id, y = y)) +
-    geom_point(size = 0.25) +
-    geom_ribbon(aes(ymin = `0.25`, ymax = `0.75`), alpha = 0.3) +
-    geom_ribbon(aes(ymin = `0.05`, ymax = `0.95`), alpha = 0.15) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    facet_wrap(. ~ week_infection) +
-    xlab("Local area") +
-    ylab("Mean reproduction number") +
-    theme_cowplot() +
-    theme(axis.text.x = element_blank(),
-          axis.text.y = element_blank(),
-          axis.ticks = element_blank())
-
-  print(p)
-}
-
-p <- plot_pred_int("short", "interventions_time_by_random_region")
-```
-*Figure 3: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
+*Table 2: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case fatality rate.*
 
 # Discussion
 
-We studied the relationship between SGTF (as a proxy for the new variant of concern) and the effective reproduction number using three related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model with region-specific splines fitted the best yielding central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in R with short and long generation interval, respectively. In principle this could be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-regions UTLA-level differences. Indeed, the model that modelled all temporal variation as related to interventions, mobility and SGTF (central estimates: `r effect_size("short","interventions_random_region")` and `r effect_size("long","interventions_random_region")` increase with short and long generation interval, respectively). This model yielded a poorer fit to the data than the more flexible models that allowed for variation over time not ascribed to these factors, suggesting that it is affected by confounders not included in the model.
-
-Our estimates with the longer generation interval without adjusting for additional residual variation over time are consistent with ones from two other modelling studies using similar generation intervals (5.5 and 6.5 days, respectively), which were in the order of a 50-74% [@davies2020] or 50-75% [@imperial42] increase. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect. This may be a particular issue where the effect of the variant would cause the reproduction number to cross 1.
-
-Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of SGTF observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Further investigation will be necessary in order to establish the relationship between SGTF and the reproduction number.
-
-We found consistent evidence that SGTF was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that NPI measures implemented since September in England may not be sufficient to reduce the reproduction number below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
+We studied the relationship between SGTF (as a proxy for the new variant of concern) and the case fatality rate of Covid-19 adjusted using both an additive and a multiplicative relationship. We considered a range of confounders and explored residual variation on both a national and regional level. Models that adjusted for residual variation fitted the data best but may make interpreting effect sizes difficult. In models that did not adjust for residual variation the best fitting model, that included all covariates, indicated that S-gene negativity was associated with an increase in the baseline case fatality rate though the presence of unmeasured confounders is likely. Models that included the SGTF as an additive effect fit the data better than those that treated it as multiplicative. Additional work is needed before these results can be interpreted further. 
 
 # References
 
 <div id = 'refs'></div>
-
-# Supplementary Information
-
-```{r r_vs_prop_long, echo = FALSE,fig.width = 10, fig.height = 10}
-suppressWarnings(plot_rt(long_rt))
-```
-
-```{r results = 'asis', echo = FALSE}
-cat(sep = "",
-    "*Supplementary Figure 1: Mean reproduction numbers using a generation ",
-    "time with a mean of 5.5 days since the week beginning ",
-    format(min(utla_rt$week_infection), "%d %B, %Y"),
-    ", compared to the proportion of all test-positives tested for S-gene",
-    " that tested S-gene positive/negative that week. Each point ",
-    " represents one UTLA.*")
-```
-
-```{r long-fit, echo = FALSE,fig.width = 10, fig.height = 10}
-p <- plot_pred_int("long", "interventions_time_by_random_region")
-```
-*Supplementary Figure 2: Predictions of the best fitting long generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
-
-
