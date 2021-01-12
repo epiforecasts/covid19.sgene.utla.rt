@@ -228,5 +228,4 @@ output$fits <- fits
 output$effect <- variant_effect
 output$loos <- loos
 output$lc <- lc
-
 saveRDS(output, here("output", "cfr.rds"))
