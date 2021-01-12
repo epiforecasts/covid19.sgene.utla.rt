@@ -2,6 +2,7 @@
 library(here)
 library(dplyr)
 library(tidyr)
+library(purrr)
 library(vroom)
 library(lubridate)
 library(brms)
@@ -158,11 +159,10 @@ if (no_cores <= 4) {
   mc_cores <- ceiling(no_cores / 4) 
 }
 # fit models
+warning("Fitting models sequentially due to mclapply issues")
 fits <- list()
-fits[["multiplicative"]] <- mclapply(models, nb_model, mc.cores = mc_cores,
-                                     mc.preschedule = FALSE)
-fits[["additive"]] <- mclapply(models, nb_model, mc.cores = mc_cores, 
-                               mc.preschedule = FALSE, additive = TRUE)
+fits[["multiplicative"]] <- lapply(models, nb_model)
+fits[["additive"]] <- lapply(models, nb_model, additive = TRUE)
 
 # variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {  
@@ -217,7 +217,11 @@ loos[["additive"]] <- add_loo(fits[["additive"]])
 lc <- list()
 lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
 lc[["additive"]] <- loo_compare(loos[["additive"]])
-
+all_loos <- flatten(loos)
+names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"), 
+                     paste0(names(all_loos)[1:length(models)], "_additive"))
+lc[["all"]] <- loo_compare(all_loos)
+  
 # Save results ------------------------------------------------------------
 output <- list()
 output$fits <- fits
