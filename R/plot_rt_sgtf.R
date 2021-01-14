@@ -4,6 +4,8 @@ library(ggplot2)
 library(dplyr)
 library(cowplot)
 library(lubridate)
+# devtools::install_github("epiforecasts/covidregionaldata)
+library(covidregionaldata)
 
 # Get data ----------------------------------------------------------------
 utla_rt <- readRDS(here("data", "utla_rt_with_covariates.rds"))
@@ -31,18 +33,22 @@ target_rt <- utla_rt %>%
                                "2020-11-23", "2020-12-07",
                                "2020-12-21"))
 
-ggplot(target_rt, aes(x = prop_sgtf, y = rt_mean,
+plot <- ggplot(target_rt, aes(x = prop_sgtf, y = rt_mean,
                       fill = nhser_name, size = cases)) +
-    geom_jitter(pch = 21) +
-    facet_wrap(. ~ week_infection, ncol = 2) +
-    scale_fill_brewer("", palette = "Set1") +
-    xlab("Proportion SGTF") +
-    ylab("Mean reproduction number") +
-    theme_cowplot(font_size = 10) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    labs(size = paste("Cases")) +
-    guides(fill = guide_legend(title = "NHS region", ncol = 1), 
-           size = guide_legend(ncol = 1)) +
-    theme(legend.position = c(0.85, 0.125),
-          legend.box = "vertical",
-          strip.background = element_blank())
+               geom_jitter(pch = 21) +
+               facet_wrap(. ~ week_infection, ncol = 2) +
+               scale_fill_brewer("", palette = "Set1") +
+               xlab("Proportion SGTF") +
+               ylab("Mean reproduction number") +
+               theme_cowplot(font_size = 10) +
+               geom_hline(yintercept = 1, linetype = "dashed") +
+               labs(size = paste("Cases")) +
+               guides(fill = guide_legend(title = "NHS region", ncol = 1), 
+               size = guide_legend(ncol = 1)) +
+               theme(legend.position = c(0.7, 0.125),
+                     legend.direction = "vertical",
+                     legend.box = "horizontal",
+                     strip.background = element_blank())
+
+saveRDS(plot, here("output", "rt_sgtf_scatter.rds"))
+ggsave(here("output", "rt_sgtf_scatter.pdf"), plot, height = 7, width = 7) 
