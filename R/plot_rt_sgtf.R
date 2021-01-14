@@ -34,13 +34,15 @@ target_rt <- utla_rt %>%
 ggplot(target_rt, aes(x = prop_sgtf, y = rt_mean,
                       fill = nhser_name, size = cases)) +
     geom_jitter(pch = 21) +
-    facet_wrap(. ~ week_infection) +
+    facet_wrap(. ~ week_infection, ncol = 2) +
     scale_fill_brewer("", palette = "Set1") +
     xlab("Proportion SGTF") +
     ylab("Mean reproduction number") +
-    theme_cowplot() +
+    theme_cowplot(font_size = 10) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     labs(size = paste("Cases")) +
-    theme(legend.position = "bottom",
-          legend.direction = "horizontal",
-          legend.box = "vertical")
+    guides(fill = guide_legend(title = "NHS region", ncol = 1), 
+           size = guide_legend(ncol = 1)) +
+    theme(legend.position = c(0.85, 0.125),
+          legend.box = "vertical",
+          strip.background = element_blank())
