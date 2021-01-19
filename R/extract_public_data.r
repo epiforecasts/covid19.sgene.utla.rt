@@ -141,7 +141,7 @@ tiers <- start_tiers %>%
 saveRDS(tiers, here("data", "tiers.rds"))
 
 # Extract mobility data ---------------------------------------------------
-mobility_file <- here("data-raw", "google_mobility_2020-12-31.csv")
+mobility_file <- here("data-raw", "gm_for_analysis-2020-01-18.csv")
 
 mobility <- read_csv(mobility_file) %>%
   select(date, laname = lad_nm,
