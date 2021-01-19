@@ -11,16 +11,62 @@ library(loo)
 
 # set number of parallel cores
 no_cores <- detectCores()
+## set to "backcalculated" or "lagged"
+deaths_cases_rel <- "lagged"
 
-# Data --------------------------------------------------------------------
-# get raw cases by data of infection from epiforecasts.io 
-case_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                          "master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv")) %>% 
-  mutate(data = "cases")
-# get raw deaths by data of infection from epiforecasts.io 
-death_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                           "master/subnational/united-kingdom-local/deaths/summary/cases_by_infection.csv")) %>% 
-  mutate(data = "deaths")
+if (deaths_cases_rel == "backcalculated") {
+                                        # Data --------------------------------------------------------------------
+                                        # get raw cases by data of infection from epiforecasts.io 
+  case_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+                            "master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv")) %>% 
+    mutate(data = "cases")
+                                        # get raw deaths by data of infection from epiforecasts.io 
+  death_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+                             "master/subnational/united-kingdom-local/deaths/summary/cases_by_infection.csv")) %>% 
+    mutate(data = "deaths")
+} else if (deaths_cases_rel == "lagged") {
+  cases <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/cases/summary/reported_cases.csv") %>%
+    rename(cases = confirm)
+  deaths <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv") %>%
+    rename(deaths = confirm)
+
+  combined <- tibble(date = unique(c(cases$date, deaths$date))) %>%
+    full_join(cases, by = "date") %>%
+    full_join(deaths, by = c("date", "region")) %>%
+    ## mutate(date = floor_date(date, "week", week_start = 1)) %>%
+    group_by(date, region) %>%
+    summarise_all(sum) %>%
+    ungroup()
+
+  ## find lag that maximises mean correlation across UTLAs
+  max <- 28
+  cor <- numeric(max)
+  for (lag in seq(0, max)) {
+    cor[lag] <- combined %>%
+      group_by(region) %>%
+      mutate(deaths = lead(deaths, n = lag)) %>%
+      filter(!is.na(deaths)) %>%
+      mutate(id = 1:n()) %>%
+      filter(id <= (max(id) - 28 + lag)) %>%
+      summarise(cor = cor(cases, deaths), .groups = "drop") %>%
+      filter(!is.na(cor)) %>%
+      summarise(mean = mean(cor)) %>%
+      .$mean
+  }
+  set_lag <- which.max(cor) - 1
+
+  case_infs <- cases %>%
+    mutate(date = date - 7,
+           data = "cases",
+           median = cases)
+  death_infs <- deaths %>%
+    mutate(date = date - 7 - set_lag,
+           data = "deaths",
+           median = deaths)
+
+} else {
+  stop("Don't recognise deaths_cases_rel==", cases_deaths_rel, ".")
+}
 
 # link datasets and pivot wider
 infections <- case_infs %>% 
