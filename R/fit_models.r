@@ -51,7 +51,8 @@ base_model <- function(form, iter = 2000, ...) {
 fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   # filter for target
   dynamic_data <- data %>%
-    rename_with(~ sub(paste0("_", gt, "_gt"), "", .x))
+    rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
+    filter(!is.na(rt_mean))
   static_data <- dynamic_data %>%
     filter(week_infection == max(week_infection))
 
