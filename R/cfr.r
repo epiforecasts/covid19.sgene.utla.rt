@@ -14,49 +14,41 @@ no_cores <- detectCores()
 
 # Data --------------------------------------------------------------------
 # get raw cases by data of infection from epiforecasts.io 
-case_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                          "master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv")) %>% 
+cases <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+                          "master/subnational/united-kingdom-local/cases/summary/reported_cases.csv")) %>% 
   mutate(data = "cases")
 # get raw deaths by data of infection from epiforecasts.io 
-death_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                           "master/subnational/united-kingdom-local/deaths/summary/cases_by_infection.csv")) %>% 
+deaths <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+                           "master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv")) %>% 
   mutate(data = "deaths")
 
 # link datasets and pivot wider
-infections <- case_infs %>% 
-  bind_rows(death_infs) %>% 
-  filter(type == "estimate") %>% 
-  select(utla_name = region, date, data, value = median) %>% 
-  pivot_wider(names_from = "data") %>% 
-  group_by(utla_name) %>% 
-  complete(date = seq(min(date), max(date), by = "day")) %>% 
-  mutate(cases = replace_na(cases, 0)) %>% 
-  drop_na(deaths)
+reports <- cases %>% 
+  bind_rows(deaths) %>% 
+  select(utla_name = region, date, data, value = confirm) %>% 
+  pivot_wider(names_from = "data")
 
 # Define covariates -------------------------------------------------------
 # get variant proportion
 sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
   drop_na(prop_sgtf) %>% 
-  filter(week_infection > "2020-10-01")
+  mutate(week_specimen = week_infection + 7) %>% 
+  filter(week_specimen > "2020-10-01")
 
-# make infections weekly summary
-weekly_infections <- infections %>% 
-  mutate(week_infection = floor_date(date, "week", week_start = wday(max(sgene_by_utla$week_infection)) - 1)) %>% 
-  group_by(utla_name, week_infection) %>%
-  summarise(cases = sum(cases), deaths = sum(deaths), n = n(), .groups = "drop") %>%
-  filter(n == 7) %>%
-  select(-n)
+# add week indicator
+reports <- reports %>% 
+  mutate(week_specimen = floor_date(date, "week", week_start = wday(max(sgene_by_utla$week_specimen)) - 1))
 
 # link with variant proportion
-deaths_with_cov <- weekly_infections %>% 
-  inner_join(sgene_by_utla, by = c("week_infection", "utla_name")) %>% 
-  select(utla = utla_name, week_infection, region = nhser_name, 
+secondary_with_cov <- reports %>% 
+  inner_join(sgene_by_utla, by = c("week_specimen", "utla_name")) %>% 
+  select(utla = utla_name, date, week_specimen, region = nhser_name, 
          deaths, cases, prop_sgtf, samples)
 
 # make normalised predictors
-deaths_with_cov <- deaths_with_cov %>% 
+secondary_with_cov <- secondary_with_cov %>% 
   mutate(normalised_cases = (cases - mean(cases)) / sd(cases),
-         time = as.numeric(week_infection),
+         time = as.numeric(date),
          time = time - min(time),
          time = (time - mean(time)) / sd(time))
 
@@ -121,7 +113,7 @@ real variant_nb_rng(int y, real mu, real phi, real alpha,
 }
 
 # define model function
-nb_model <- function(form, iter = 2000, data = deaths_with_cov,
+nb_model <- function(form, iter = 2000, data = secondary_with_cov,
                      additive = FALSE, ...) {
   # define priors
   if (additive) {
@@ -130,7 +122,7 @@ nb_model <- function(form, iter = 2000, data = deaths_with_cov,
     priors <- c(prior(lognormal(0, 0.5), class = alpha))
   }
   message("Fitting: ", as.character(form))
-  brm(formula = form,
+  make_stancode(formula = form,
       family = variant_nb(additive = additive),
       prior = priors,
       data,
