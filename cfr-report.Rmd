@@ -123,7 +123,7 @@ lc %>%
 
 ```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
-  paste0(var * 100, "%")
+  paste0(var)
 }
 effects <- lc %>% 
   select(- `ELPD difference`) %>% 

@@ -25,14 +25,15 @@ if (deaths_cases_rel == "backcalculated") {
                              "master/subnational/united-kingdom-local/deaths/summary/cases_by_infection.csv")) %>% 
     mutate(data = "deaths")
 } else if (deaths_cases_rel == "lagged") {
-  cases <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/cases/summary/reported_cases.csv") %>%
+  cases <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/admissions/summary/reported_cases.csv") %>%
     rename(cases = confirm)
   deaths <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv") %>%
     rename(deaths = confirm)
 
   combined <- tibble(date = unique(c(cases$date, deaths$date))) %>%
-    full_join(cases, by = "date") %>%
-    full_join(deaths, by = c("date", "region")) %>%
+    left_join(cases, by = "date") %>%
+    left_join(deaths, by = c("date", "region")) %>%
+    filter(!is.na(deaths)) %>% 
     ## mutate(date = floor_date(date, "week", week_start = 1)) %>%
     group_by(date, region) %>%
     summarise_all(sum) %>%
@@ -119,9 +120,9 @@ deaths_with_cov <- deaths_with_cov %>%
 # define custom negative binomial family including variant factor and cases
 variant_nb <- function(additive = FALSE) {
   custom_family(
-    "variant_nb", dpars = c("mu", "phi", "alpha"),
-    links = c("logit", "log", "identity"),
-    lb = c(0, 0, ifelse(!additive, 0, NA)),
+    "variant_nb", dpars = c("mu", "phi", "alpha", "delta"),
+    links = c("logit", "log", "identity", "log"),
+    lb = c(0, 0, ifelse(!additive, 0, NA), 0),
     type = "int",
     vars = c("f[n]", "cases[n]", "effect[1]")
   )
@@ -131,24 +132,24 @@ variant_nb <- function(additive = FALSE) {
 make_stanvars <- function(data, additive = FALSE) {
   stan_funs <- "
 real variant_nb_lpmf(int y, real mu, real phi, real alpha,
-                     real f, int cases, int effect) {
+                     real delta, real f, int cases, int effect) {
     real scaled_cases;
     if (effect) {
       scaled_cases = (mu + alpha * f) * cases;
     }else {
       scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
     }
-    return  neg_binomial_2_lpmf(y | scaled_cases, phi);
-                            }
+    return  neg_binomial_2_lpmf(y | scaled_cases + delta, phi);
+}
 real variant_nb_rng(int y, real mu, real phi, real alpha,
-                    real f, int cases, int effect) {
+                    real delta, real f, int cases, int effect) {
     real scaled_cases;
     if (effect) {
       scaled_cases = (mu + alpha * f) * cases;
     }else {
       scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
     }
-    return  neg_binomial_2_rng(scaled_cases, phi);
+    return  neg_binomial_2_rng(scaled_cases + delta, phi);
                             }
 "
   stanvars <- c(stanvar(block = "functions", scode = stan_funs),
@@ -195,8 +196,8 @@ models[["region"]] <- as.formula(deaths ~ region)
 models[["time"]] <- as.formula(deaths ~ s(time, k = 9))
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
 models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + region + (1 | utla))
-models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
-models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
+##models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
+##models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
 
 # core usage
 if (no_cores <= 4) { 
@@ -232,22 +233,24 @@ log_lik_variant_nb <- function(i, prep) {
   mu <- prep$dpars$mu[, i]
   phi <- prep$dpars$phi
   alpha <- prep$dpars$alpha
+  delta <- prep$dpars$delta
   f <- prep$data$f[i]
   y <- prep$data$Y[i]
   cases <- prep$data$cases[i]
   effect <- prep$data$effect[1]
-  variant_nb_lpmf(y, mu, phi, alpha, f, cases, effect)
+  variant_nb_lpmf(y, mu, phi, alpha, delta, f, cases, effect)
 }
 
 posterior_predict_variant_nb <- function(i, prep, ...) {
   mu <- prep$dpars$mu[, i]
   phi <- prep$dpars$phi
   alpha <- prep$dpars$alpha
+  delta <- prep$dpars$delta
   f <- prep$data$f[i]
   y <- prep$data$Y[i]
   cases <- prep$data$cases[i]
   effect <- prep$data$effect[1]
-  variant_nb_rng(mu, phi, alpha, f, cases, effect)
+  variant_nb_rng(mu, phi, alpha, delta, f, cases, effect)
 }
 
 options(mc.cores = no_cores)
@@ -274,4 +277,4 @@ output$fits <- fits
 output$effect <- variant_effect
 output$loos <- loos
 output$lc <- lc
-saveRDS(output, here("output", "cfr.rds"))
+saveRDS(output, here("output", "hfr.rds"))

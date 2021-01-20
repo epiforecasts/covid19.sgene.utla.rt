@@ -27,12 +27,13 @@ if (deaths_cases_rel == "backcalculated") {
 } else if (deaths_cases_rel == "lagged") {
   cases <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/cases/summary/reported_cases.csv") %>%
     rename(cases = confirm)
-  deaths <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv") %>%
+  deaths <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/admissions/summary/reported_cases.csv") %>%
     rename(deaths = confirm)
 
   combined <- tibble(date = unique(c(cases$date, deaths$date))) %>%
-    full_join(cases, by = "date") %>%
-    full_join(deaths, by = c("date", "region")) %>%
+    left_join(cases, by = "date") %>%
+    left_join(deaths, by = c("date", "region")) %>%
+    filter(!is.na(deaths)) %>% 
     ## mutate(date = floor_date(date, "week", week_start = 1)) %>%
     group_by(date, region) %>%
     summarise_all(sum) %>%
@@ -195,8 +196,8 @@ models[["region"]] <- as.formula(deaths ~ region)
 models[["time"]] <- as.formula(deaths ~ s(time, k = 9))
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
 models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + region + (1 | utla))
-models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
-models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
+##models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
+##models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
 
 # core usage
 if (no_cores <= 4) { 
@@ -274,4 +275,4 @@ output$fits <- fits
 output$effect <- variant_effect
 output$loos <- loos
 output$lc <- lc
-saveRDS(output, here("output", "cfr.rds"))
+saveRDS(output, here("output", "chr.rds"))
