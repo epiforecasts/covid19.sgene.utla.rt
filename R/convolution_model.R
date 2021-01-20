@@ -122,15 +122,15 @@ vector convolve_to_report(vector infections,
             name = "locs"),
     stanvar(block = "data",
             scode = "  int li[locs];",
-            x = li,
+            x = as.array(li),
             name = "li"),
     stanvar(block = "data",
             scode = "  int lt[locs];",
-            x = lt,
+            x =  as.array(lt),
             name = "lt"),
     stanvar(block = "data",
             scode = "  int conv_max[1];",
-            x = convolution_max,
+            x =  as.array(convolution_max),
             name = "conv_max")
   )
   
