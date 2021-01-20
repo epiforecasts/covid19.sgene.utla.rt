@@ -12,8 +12,12 @@ convolution_model <- function(formula, data, convolution_max = 30, dry_run = FAL
   locs_t <- copy(data)[, .(.N), by = loc]$N
   locs <- length(unique(data$loc))
   lt <- cumsum(locs_t)
-  li <- c(1, 1 + lt[1:(locs - 1)])
-  
+  li <- 1
+  if (locs > 1) {
+    li <- c(li, 1 + lt[1:(locs - 1)])
+    
+  }
+
   
   # custom family
   conv_nb <- function() {
@@ -27,7 +31,7 @@ convolution_model <- function(formula, data, convolution_max = 30, dry_run = FAL
   }
   
   # define custom stan code
-  make_stanvars <- function(data) {
+  make_stanvars <- function() {
     conv_nb <- "
 real conv_nb_lpmf(int y, real mu, real phi, real conv_primary) {
     real scaled_primary = mu * conv_primary;
@@ -166,7 +170,7 @@ if (dry_run) {
 fit <- brm_fn(formula = formula,
               family = conv_nb(),
               data = data,
-              stanvars = make_stanvars(data),
+              stanvars = make_stanvars(),
               ...)
 return(fit)
 }
