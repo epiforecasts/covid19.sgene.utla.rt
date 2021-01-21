@@ -33,7 +33,9 @@ reports <- cases %>%
 sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
   drop_na(prop_sgtf) %>% 
   mutate(week_specimen = week_infection + 7) %>% 
-  filter(week_specimen > "2020-10-01")
+  filter(week_specimen > "2020-10-01") %>% 
+  group_by(utla_name, date) %>% 
+  slice()
 
 # add week indicator
 reports <- reports %>% 
@@ -54,14 +56,17 @@ secondary_with_cov <- secondary_with_cov %>%
 
 # filter to a reduced set for testing
 secondary_with_cov <- secondary_with_cov %>% 
-#  filter(utla %in% c("Derby", "Leicester")) %>% 
+  filter(utla %in% unique(utla)[1:10]) %>% 
   rename(loc = utla, primary = cases) 
 
 # Define model ------------------------------------------------------------
 source(here("R/convolution_model.r"))
 
-fit <- convolution_model(deaths ~ (1 | loc), data = secondary_with_cov)
+# set context specific priors
+priors <- c(prior("normal(-4, 1)", class = "Intercept"))
 
+# fit model
+fit <- convolution_model(deaths ~ (1 | loc), data = secondary_with_cov, prior = priors)
 
 # Fit models --------------------------------------------------------------
 # models <- list()

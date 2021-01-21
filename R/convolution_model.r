@@ -140,8 +140,8 @@ vector convolve_to_report(vector infections,
             real conv_sd[1];") )
   
   
-  stan_tparameters <- c(
-    stanvar(block = "tparameters",
+  stan_cmodel <- c(
+    stanvar(block = "model",
             scode = "  
   vector[N] conv_primary;
   for (s in 1:locs) {
@@ -150,12 +150,12 @@ vector convolve_to_report(vector infections,
     }
       ")
   )
-  
+
   stanvars <- c(
     stan_functions,
     stan_data, 
     stan_parameters,
-    stan_tparameters
+    stan_cmodel
   )
   
   if (length(stanvars) == 0) {
