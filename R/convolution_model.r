@@ -2,7 +2,7 @@ library(data.table)
 library(brms)
 
 convolution_model <- function(formula, data, conv_mean = c(2.5, 1),
-                              conv_sd = c(1, 1), conv_max = 50, conv_varying = FALSE, 
+                              conv_sd = c(1, 1), conv_max = 30, conv_varying = FALSE, 
                               hold_out_time = 28, dry_run = FALSE, ...) {
   
   # order data
