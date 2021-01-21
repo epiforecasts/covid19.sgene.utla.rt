@@ -56,7 +56,7 @@ secondary_with_cov <- secondary_with_cov %>%
 
 # filter to a reduced set for testing
 secondary_with_cov <- secondary_with_cov %>% 
-  filter(utla %in% unique(utla)[1:5]) %>% 
+  filter(utla %in% unique(utla)[1:20]) %>% 
   rename(loc = utla, primary = cases) 
 
 # Define model ------------------------------------------------------------
@@ -66,7 +66,7 @@ source(here("R/convolution_model.r"))
 priors <- c(prior("normal(-4, 1)", class = "Intercept"))
 
 # fit model
-fit <- convolution_model(deaths ~ (1 | loc), data = secondary_with_cov, prior = priors)
+fit <- convolution_model(deaths ~ (1 | loc) + f, data = secondary_with_cov, prior = priors)
 
 # Fit models --------------------------------------------------------------
 # models <- list()
