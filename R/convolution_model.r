@@ -1,38 +1,37 @@
 library(data.table)
 library(brms)
 
-convolution_model <- function(formula, data, convolution_max = 30, dry_run = FALSE, ...) {
+convolution_model <- function(formula, data, max_conv = 30, dry_run = FALSE, ...) {
   
   # order data
   data <- as.data.table(data)
   data <- setorder(data, loc, date)
-  
-  
-  # get time per location and indexing
-  locs_t <- copy(data)[, .(.N), by = loc]$N
-  locs <- length(unique(data$loc))
-  lt <- cumsum(locs_t)
-  li <- 1
-  if (locs > 1) {
-    li <- c(li, 1 + lt[1:(locs - 1)])
     
-  }
-
-  
-  # custom family
-  conv_nb <- function() {
-    custom_family(
-      "conv_nb", dpars = c("mu", "phi"),
-      links = c("logit", "log"),
-      lb = c(0, 0),
-      type = "int",
-      vars = c("conv_primary[n]")
-    )
-  }
-  
   # define custom stan code
-  make_stanvars <- function() {
-    conv_nb <- "
+  make_convolution_stan <- function(data, max_conv) {
+    
+    # custom family
+    conv_nb <- function() {
+      custom_family(
+        "conv_nb", dpars = c("mu", "phi"),
+        links = c("logit", "log"),
+        lb = c(0, 0),
+        type = "int",
+        vars = c("conv_primary[n]")
+      )
+    }
+    
+    # get time per location and indexing
+    locs_t <- copy(data)[, .(.N), by = loc]$N
+    locs <- length(unique(data$loc))
+    lt <- cumsum(locs_t)
+    li <- 1
+    if (locs > 1) {
+      li <- c(li, 1 + lt[1:(locs - 1)])
+      
+    }
+    
+    conv_nb_lik <- "
 real conv_nb_lpmf(int y, real mu, real phi, real conv_primary) {
     real scaled_primary = mu * conv_primary;
     return  neg_binomial_2_lpmf(y | scaled_primary, phi);
@@ -107,7 +106,7 @@ vector convolve_to_report(vector infections,
 }"
   
   stan_functions <- c(
-    stanvar(block = "functions", scode = conv_nb),
+    stanvar(block = "functions", scode = conv_nb_lik),
     stanvar(block = "functions", scode = epinow2_funcs)
   )      
   
@@ -130,7 +129,7 @@ vector convolve_to_report(vector infections,
             name = "lt"),
     stanvar(block = "data",
             scode = "  int conv_max[1];",
-            x =  as.array(convolution_max),
+            x =  as.array(max_conv),
             name = "conv_max")
   )
   
@@ -158,8 +157,15 @@ vector convolve_to_report(vector infections,
     stan_parameters,
     stan_tparameters
   )
-  return(stanvars)
+  
+  if (length(stanvars) == 0) {
+    stop("Custom stan code incorrectly defined. This is likely an issue with the input data or parameters")
   }
+  
+  return(list(family = conv_nb, other = stanvars))
+}
+  
+conv_stan <- make_convolution_stan(data, max_conv = max_conv)
 
 if (dry_run) {
   brm_fn <- make_stancode
@@ -168,9 +174,9 @@ if (dry_run) {
 }
 # fit model
 fit <- brm_fn(formula = formula,
-              family = conv_nb(),
+              family = conv_stan$family(),
               data = data,
-              stanvars = make_stanvars(),
+              stanvars = conv_stan$other,
               ...)
 return(fit)
 }
