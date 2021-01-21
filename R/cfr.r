@@ -11,7 +11,7 @@ library(loo)
 
 # set number of parallel cores
 no_cores <- detectCores()
-
+options(mc.cores = no_cores)
 # Data --------------------------------------------------------------------
 # get raw cases by data of infection from epiforecasts.io 
 cases <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
@@ -56,7 +56,7 @@ secondary_with_cov <- secondary_with_cov %>%
 
 # filter to a reduced set for testing
 secondary_with_cov <- secondary_with_cov %>% 
-  filter(utla %in% unique(utla)[1:10]) %>% 
+  filter(utla %in% unique(utla)[1:5]) %>% 
   rename(loc = utla, primary = cases) 
 
 # Define model ------------------------------------------------------------

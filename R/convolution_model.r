@@ -1,12 +1,14 @@
 library(data.table)
 library(brms)
 
-convolution_model <- function(formula, data, max_conv = 30, dry_run = FALSE, ...) {
+convolution_model <- function(formula, data, conv_mean = c(2.5, 0.5),
+                              conv_sd = c(0.5, 0.25), conv_max = 30, 
+                              dry_run = FALSE, ...) {
   
   # order data
   data <- as.data.table(data)
   data <- setorder(data, loc, date)
-    
+
   # define custom stan code
   make_convolution_stan <- function(data, max_conv) {
     
@@ -28,7 +30,6 @@ convolution_model <- function(formula, data, max_conv = 30, dry_run = FALSE, ...
     li <- 1
     if (locs > 1) {
       li <- c(li, 1 + lt[1:(locs - 1)])
-      
     }
     
     conv_nb_lik <- "
@@ -76,33 +77,14 @@ vector convolve(vector cases, vector rev_pmf) {
    return(conv_cases);
   }
 
-
-// convolve latent infections to reported (but still unobserved) cases
-vector convolve_to_report(vector infections,
-                          real[] delay_mean,
-                          real[] delay_sd,
-                          int[] max_delay,
-                          int seeding_time) {
-  int t = num_elements(infections);
-  vector[t - seeding_time] reports;
-  vector[t] unobs_reports = infections;
-  int delays = num_elements(delay_mean);
-  if (delays) {
-    for (s in 1:delays) {
-      vector[max_delay[s]] pmf = rep_vector(1e-5, max_delay[s]);
-      int delay_indexes[max_delay[s]];
-      for (i in 1:max_delay[s]) {
-        delay_indexes[i] = max_delay[s] - i;
+vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
+  vector[conv_max] pmf = rep_vector(1e-5, conv_max);
+      int conv_indexes[conv_max];
+      for (i in 1:conv_max) {
+        conv_indexes[i] = conv_max - i;
       }
-      pmf = pmf + discretised_lognormal_pmf(delay_indexes, delay_mean[s],
-                                            delay_sd[s], max_delay[s]);
-      unobs_reports = convolve(unobs_reports, pmf);
-    }
-    reports = unobs_reports[(seeding_time + 1):t];
-  }else{
-    reports = infections[(seeding_time + 1):t];
-  }
-  return(reports);
+      pmf = pmf + discretised_lognormal_pmf(conv_indexes, conv_mean, conv_sd, conv_max);
+      return(pmf);
 }"
   
   stan_functions <- c(
@@ -128,27 +110,33 @@ vector convolve_to_report(vector infections,
             x =  as.array(lt),
             name = "lt"),
     stanvar(block = "data",
-            scode = "  int conv_max[1];",
-            x =  as.array(max_conv),
+            scode = "  int conv_max;",
+            x =  conv_max,
             name = "conv_max")
   )
   
   stan_parameters <- c(
     stanvar(block = "parameters",
             scode = "  
-            real conv_mean[1];
-            real conv_sd[1];") )
+            real conv_mean;
+            real<lower=0> conv_sd;") )
   
   
   stan_cmodel <- c(
     stanvar(block = "model",
-            scode = "  
+            scode = paste0("  
   vector[N] conv_primary;
+  vector[conv_max] pmf; 
+  
+  
+  conv_mean ~ normal(", conv_mean[1], ",", conv_mean[2], ");
+  conv_sd ~ normal(", conv_sd[1], ",", conv_sd[2], ") T[0,];
+  
+  pmf = calc_pmf(conv_mean, conv_sd, conv_max);
   for (s in 1:locs) {
-    conv_primary[li[s]:lt[s]] = 
-          convolve_to_report(to_vector(primary[li[s]:lt[s]]), conv_mean, conv_sd, conv_max, 0);
+    conv_primary[li[s]:lt[s]] = convolve(to_vector(primary[li[s]:lt[s]]), pmf);
     }
-      ")
+      "))
   )
 
   stanvars <- c(
