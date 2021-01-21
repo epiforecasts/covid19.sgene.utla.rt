@@ -1,16 +1,16 @@
 library(data.table)
 library(brms)
 
-convolution_model <- function(formula, data, conv_mean = c(2.5, 0.5),
-                              conv_sd = c(0.5, 0.25), conv_max = 30, 
-                              dry_run = FALSE, ...) {
+convolution_model <- function(formula, data, conv_mean = c(2.5, 1),
+                              conv_sd = c(1, 1), conv_max = 50, conv_varying = FALSE, 
+                              hold_out_time = 14, dry_run = FALSE, ...) {
   
   # order data
   data <- as.data.table(data)
   data <- setorder(data, loc, date)
-
+ 
   # define custom stan code
-  make_convolution_stan <- function(data, max_conv) {
+  make_convolution_stan <- function(data, max_conv, conv_varying, hold_out_time) {
     
     # custom family
     conv_nb <- function() {
@@ -19,10 +19,10 @@ convolution_model <- function(formula, data, conv_mean = c(2.5, 0.5),
         links = c("logit", "log"),
         lb = c(0, 0),
         type = "int",
-        vars = c("conv_primary[n]")
+        vars = c("conv_primary[n]", "fit[n]")
       )
     }
-    
+     
     # get time per location and indexing
     locs_t <- copy(data)[, .(.N), by = loc]$N
     locs <- length(unique(data$loc))
@@ -31,13 +31,28 @@ convolution_model <- function(formula, data, conv_mean = c(2.5, 0.5),
     if (locs > 1) {
       li <- c(li, 1 + lt[1:(locs - 1)])
     }
+    # is data within burn in range
+    fit <- copy(data)[, .(time = 1:.N), by = loc]
+    fit[time <= hold_out_time, time := 0]
+    fit[time > hold_out_time, time := 1]
+    fit <- fit$time
+    
+    if (locs == 1) {
+      conv_varying <- FALSE
+    }
     
     conv_nb_lik <- "
-real conv_nb_lpmf(int y, real mu, real phi, real conv_primary) {
+real conv_nb_lpmf(int y, real mu, real phi, real conv_primary, int fit) {
     real scaled_primary = mu * conv_primary;
-    return  neg_binomial_2_lpmf(y | scaled_primary, phi);
+    real log_lik;
+    if (fit) {
+     log_lik = neg_binomial_2_lpmf(y | scaled_primary, phi);
+    }else{
+     log_lik = 0;
+    }
+    return  log_lik;
                             }
-real conv_nb_rng(int y, real mu, real phi, real conv_primary) {
+real conv_nb_rng(int y, real mu, real phi, real conv_primary, int fit) {
     real scaled_primary = mu * conv_primary;
     return  neg_binomial_2_rng(scaled_primary, phi);
                             }
@@ -112,14 +127,17 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
     stanvar(block = "data",
             scode = "  int conv_max;",
             x =  conv_max,
-            name = "conv_max")
+            name = "conv_max"),
+    stanvar(block = "data",
+            scode = "  int fit[N];",
+            x =  fit,
+            name = "fit")
   )
   
   stan_parameters <- c(
     stanvar(block = "parameters",
-            scode = "  
-            real conv_mean;
-            real<lower=0> conv_sd;") )
+            scode = "  real conv_mean;
+                       real<lower=0> conv_sd;") )
   
   
   stan_cmodel <- c(
@@ -153,7 +171,8 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
   return(list(family = conv_nb, other = stanvars))
 }
   
-conv_stan <- make_convolution_stan(data, max_conv = max_conv)
+conv_stan <- make_convolution_stan(data, max_conv = max_conv, conv_varying = conv_varying,
+                                   hold_out_time = hold_out_time)
 
 if (dry_run) {
   brm_fn <- make_stancode
