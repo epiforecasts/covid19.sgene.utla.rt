@@ -56,7 +56,6 @@ secondary_with_cov <- secondary_with_cov %>%
 
 # filter to a reduced set for testing
 secondary_with_cov <- secondary_with_cov %>%
-  filter(utla %in% unique(utla)[1:5]) %>% 
   rename(loc = utla, primary = cases) 
 
 # Define model ------------------------------------------------------------
