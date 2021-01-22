@@ -62,8 +62,9 @@ secondary_with_cov <- secondary_with_cov %>%
 source(here("R/convolution_model.r"))
 
 # set context specific priors
-priors <- c(prior("normal(-4, 1)", class = "Intercept"))
+priors <- c(prior("normal(-4, 0.5)", class = "Intercept"))
 
 # fit model
-fit <- convolution_model(deaths ~ (1 | loc) + prop_sgtf, data = secondary_with_cov, prior = priors)
+fit <- convolution_model(deaths ~  (1 | loc) + prop_sgtf, data = secondary_with_cov, 
+                         prior = priors, control = list(adapt_delta = 0.9))
 

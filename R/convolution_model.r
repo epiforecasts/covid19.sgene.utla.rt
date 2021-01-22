@@ -2,7 +2,7 @@ library(data.table)
 library(brms)
 
 convolution_model <- function(formula, data, conv_mean = c(2.5, 1),
-                              conv_sd = c(1, 1), conv_max = 30, conv_varying = FALSE, 
+                              conv_sd = c(1, 0.5), conv_max = 30, conv_varying = FALSE, 
                               hold_out_time = 28, dry_run = FALSE, ...) {
   
   # order data
@@ -147,20 +147,28 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
     stanvar(block = "parameters",
             scode = "  
   real conv_mean;
-  real<lower=0> conv_sd;"))
+  real<lower=0> conv_sd;
+  real<lower=0> conv_mean_loc_sd;
+  real<lower=0> conv_sd_loc_sd;
+  real<lower=0> conv_mean_loc[locs];
+  real<lower=0> conv_sd_loc[locs];"))
   
   stan_cmodel <- c(
     stanvar(block = "model",
             scode = paste0("  
   vector[N] conv_primary;
-  vector[conv_max] pmf; 
-  
   
   conv_mean ~ normal(", conv_mean[1], ",", conv_mean[2], ");
+  conv_mean_loc_sd ~ normal(0, 0.1) T[0,];
+  conv_mean_loc ~ normal(conv_mean, conv_mean_loc_sd);
   conv_sd ~ normal(", conv_sd[1], ",", conv_sd[2], ") T[0,];
-  
-  pmf = calc_pmf(conv_mean, conv_sd, conv_max);
+  conv_sd_loc_sd ~ normal(0, 0.05) T[0,];
   for (s in 1:locs) {
+    conv_sd_loc[s] ~ normal(conv_sd, conv_mean_loc_sd) T[0,];
+  }
+  
+  for (s in 1:locs) {
+    vector[conv_max] pmf = calc_pmf(conv_mean_loc[s], conv_sd_loc[s], conv_max);
     conv_primary[li[s]:lt[s]] = convolve(to_vector(primary[uli[s]:ult[s]]), pmf, ut);
     }
       "))
