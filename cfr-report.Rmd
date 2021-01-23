@@ -74,7 +74,7 @@ All models were implemented using the `brms` [@brms] package in `R`. All code re
 cfr <- assoc$cfr
 ```
 
-```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+```{r cfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 prop_data <- cfr$data %>%
   mutate(cfr = deaths / cases)
 
@@ -119,7 +119,7 @@ lc %>%
 *Table 1: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
 
 
-```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
+```{r cfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
   paste0(var)
 }
@@ -139,11 +139,11 @@ effects %>%
 
 ## Cases and hospitalisations
 
-```{r cfr,echo = FALSE}
+```{r chr,echo = FALSE}
 cfr <- assoc$chr
 ```
 
-```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+```{r chr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 prop_data <- cfr$data %>%
   mutate(cfr = deaths / cases)
 
@@ -187,7 +187,7 @@ lc %>%
 *Table 3: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
 
 
-```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
+```{r chr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
   paste0(var)
 }
@@ -207,11 +207,11 @@ effects %>%
 
 ## Hospitalisations and deaths
 
-```{r cfr,echo = FALSE}
+```{r hfr,echo = FALSE}
 cfr <- assoc$hfr
 ```
 
-```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+```{r hfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
 prop_data <- cfr$data %>%
   mutate(cfr = deaths / cases)
 
@@ -255,7 +255,7 @@ lc %>%
 *Table 5: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
 
 
-```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
+```{r hfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
   paste0(var)
 }
