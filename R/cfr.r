@@ -141,15 +141,16 @@ get_data <- function(from = c("cases", "admissions", "deaths"),
   return(deaths_with_cov)
 }
 
-# Define model ------------------------------------------------------------
-# D = c^{+}(1-f)C + c^{-}fC
-# where c is the CFR, f is the fraction of cases that are sgtf, C is the number
-# of cases by date of infection, and D is the number of deaths by date of infection
-# effect of the variant on the CFR is assumed to be:
-# c^{-} = \alpha c^{+} or c^{-} = \alpha + c^{+}
-# leading to:
-# D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C
-# define custom negative binomial family including variant factor and cases
+## Define model ------------------------------------------------------------
+## D = c^{+}(1-f)C + c^{-}fC
+## where c is the CFR, f is the fraction of cases that are sgtf, C is the number
+## of cases by date of infection, and D is the number of deaths by date of
+## infection. Effect of the variant on the CFR is assumed to be:
+## c^{-} = \alpha c^{+} or c^{-} = \alpha + c^{+}
+## leading to:
+## D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C
+
+## define custom negative binomial family including variant factor and cases
 variant_nb <- function(additive = FALSE) {
   custom_family(
     "variant_nb", dpars = c("mu", "phi", "alpha"),
@@ -160,7 +161,7 @@ variant_nb <- function(additive = FALSE) {
   )
 }
 
-# define stan code to scale cfr by cases and variant fraction
+## define stan code to scale cfr by cases and variant fraction
 make_stanvars <- function(data, additive = FALSE) {
   stan_funs <- "
 real variant_nb_lpmf(int y, real mu, real phi, real alpha,
@@ -201,7 +202,7 @@ real variant_nb_rng(int y, real mu, real phi, real alpha,
   return(stanvars)
 }
 
-# define model function
+## define model function
 nb_model <- function(form, iter = 2000, data = deaths_with_cov,
                      additive = FALSE, ...) {
   # define priors
@@ -227,35 +228,37 @@ admissions_lag <- unique(df[["chr"]]$lag)
 df[["hfr"]] <- get_data("admissions", "deaths", "lagged",
                         infections_lag = 7 + admissions_lag)
 
-# Fit models --------------------------------------------------------------
+## Fit models --------------------------------------------------------------
 models <- list()
-# define models to fit
+## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
 models[["time"]] <- as.formula(deaths ~ time)
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
 
-# core usage
+## core usage
 if (no_cores <= 4) {
   options(mc.cores = no_cores)
   mc_cores <- 1
-}else{
+} else {
   options(mc.cores = 4)
   mc_cores <- ceiling(no_cores / 4)
 }
 
-# fit models
+## fit models
 warning("Fitting models sequentially due to mclapply issues")
 results <- lapply(names(df), function(x) {
   fits <- list()
+  cat(x, "multiplicative\n")
   fits[["multiplicative"]] <-
     lapply(models, nb_model, data = df[[x]])
+  cat(x, "additive\n")
   fits[["additive"]] <-
     lapply(models, nb_model, data = df[[x]],
            additive = TRUE)
   return(fits)
 })
 
-# variant effect ----------------------------------------------------------
+## variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {
   samples <- posterior_samples(x, "alpha")
   q <- samples[, "alpha"]
@@ -266,14 +269,15 @@ extract_variant_effect <- function(x, additive = FALSE) {
 
 var_res <- lapply(names(results), function(x) {
   variant_effect <- list()
-
-  variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect)
-  variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE)
-
-  
+  variant_effect[["multiplicative"]] <-
+    lapply(fits[[x]][["multiplicative"]], extract_variant_effect)
+  variant_effect[["additive"]] <-
+    lapply(fits[[x]][["additive"]], extract_variant_effect, additive = TRUE)
+  return(variant_effect)
 })
-# Compare models ----------------------------------------------------------
-# requires custom log_lik functions to be implemented for variant_nb family
+
+## Compare models ----------------------------------------------------------
+## requires custom log_lik functions to be implemented for variant_nb family
 expose_functions(fits[[1]][[1]], vectorize = TRUE)
 
 log_lik_variant_nb <- function(i, prep) {
@@ -298,22 +302,27 @@ posterior_predict_variant_nb <- function(i, prep, ...) {
   variant_nb_rng(mu, phi, alpha, f, cases, effect)
 }
 
-options(mc.cores = no_cores)
-loos <- list()
 add_loo <- function(fits) {
   fits %>%
     lapply(add_criterion, "loo") %>%
     lapply(loo, save_psis = TRUE)
 }
-loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
-loos[["additive"]] <- add_loo(fits[["additive"]])
-lc <- list()
-lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
-lc[["additive"]] <- loo_compare(loos[["additive"]])
-all_loos <- flatten(loos)
-names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"),
-                     paste0(names(all_loos)[1:length(models)], "_additive"))
-lc[["all"]] <- loo_compare(all_loos)
+
+options(mc.cores = no_cores)
+model_loos <- lapply(names(results), function(x)) {
+  fits <- results[[x]]
+  loos <- list()
+  loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
+  loos[["additive"]] <- add_loo(fits[["additive"]])
+  lc <- list()
+  lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
+  lc[["additive"]] <- loo_compare(loos[["additive"]])
+  all_loos <- flatten(loos)
+  names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"),
+                       paste0(names(all_loos)[1:length(models)], "_additive"))
+  lc[["all"]] <- loo_compare(all_loos)
+  return(list(loos = loos, lc = lc))
+}
 
 # Save results ------------------------------------------------------------
 output <- list()
