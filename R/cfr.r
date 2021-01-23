@@ -11,102 +11,130 @@ library(loo)
 
 # set number of parallel cores
 no_cores <- detectCores()
-## set to "backcalculated" or "lagged"
-deaths_cases_rel <- "lagged"
 
-if (deaths_cases_rel == "backcalculated") {
-                                        # Data --------------------------------------------------------------------
-                                        # get raw cases by data of infection from epiforecasts.io 
-  case_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                            "master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv")) %>% 
-    mutate(data = "cases")
-                                        # get raw deaths by data of infection from epiforecasts.io 
-  death_infs <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                             "master/subnational/united-kingdom-local/deaths/summary/cases_by_infection.csv")) %>% 
-    mutate(data = "deaths")
-} else if (deaths_cases_rel == "lagged") {
-  cases <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/cases/summary/reported_cases.csv") %>%
-    rename(cases = confirm)
-  deaths <- vroom("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv") %>%
-    rename(deaths = confirm)
+##' Get a combined data set of two epidemiological indicators
+##'
+##' Indicators will be matched to the time of the "from" indicator, with a lag
+##' given by \code{infections_lag}
+##' @param from "cases", "admissions" or "deaths"
+##' @param to "cases", "admissions" or "deaths"
+##' @param type "deconvoluted" (via the EpiNow2 model) or "lagged" (fixed lag,
+##' estimated from data via correlation analysis)
+##' @return a data frame of the two indicators matched to the same time
+##' @author Sebastian Funk
+get_data <- function(from = c("cases", "admissions", "deaths"),
+                     to = c("cases", "admissions", "deaths"),
+                     type = c("backcalculated", "lagged"),
+                     infections_lag = 7) {
 
-  combined <- tibble(date = unique(c(cases$date, deaths$date))) %>%
-    full_join(cases, by = "date") %>%
-    full_join(deaths, by = c("date", "region")) %>%
-    ## mutate(date = floor_date(date, "week", week_start = 1)) %>%
-    group_by(date, region) %>%
-    summarise_all(sum) %>%
-    ungroup()
+  ## Arguments ---------------------------------------------------------------
+  from <- match.arg(from, choices = c("cases", "admissions", "deaths"))
+  to <- match.arg(to, choices = c("cases", "admissions", "deaths"))
+  type <- match.arg(type, choices = c("backcalculated", "lagged"))
 
-  ## find lag that maximises mean correlation across UTLAs
-  max <- 28
-  cor <- numeric(max)
-  for (lag in seq(0, max)) {
-    cor[lag] <- combined %>%
-      group_by(region) %>%
-      mutate(deaths = lead(deaths, n = lag)) %>%
-      filter(!is.na(deaths)) %>%
-      mutate(id = 1:n()) %>%
-      filter(id <= (max(id) - 28 + lag)) %>%
-      summarise(cor = cor(cases, deaths), .groups = "drop") %>%
-      filter(!is.na(cor)) %>%
-      summarise(mean = mean(cor)) %>%
-      .$mean
+  ## Data --------------------------------------------------------------------
+  base_url <-
+    paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
+           "master/subnational/united-kingdom-local")
+
+  if (type == "backcalculated") {
+    file_name <- "cases_by_infection.csv"
+  } else if (type == "lagged") {
+    file_name <- "reported_cases.csv"
   }
-  set_lag <- which.max(cor) - 1
 
-  case_infs <- cases %>%
-    mutate(date = date - 7,
-           data = "cases",
-           median = cases,
-	   type = "estimate")
-  death_infs <- deaths %>%
-    mutate(date = date - 7 - set_lag,
-           data = "deaths",
-           median = deaths,
-	   type = "estimate")
+  infs <- lapply(c(from, to), function(x) {
+    vroom(paste(base_url, x, "summary", file_name, sep = "/")) %>%
+      mutate(data = x) %>%
+      mutate(date = date - infections_lag)
+  })
 
-} else {
-  stop("Don't recognise deaths_cases_rel==", cases_deaths_rel, ".")
+  ## if type is lagged, add estimate of the fixed lag
+  if (type == "lagged") {
+    all_dates <-
+      as.Date(unique(unlist(lapply(infs, function(x) as.character(x$date)))))
+    combined <- tibble(date = all_dates) %>%
+      full_join(infs[[1]], by = "date") %>%
+      full_join(infs[[2]], by = c("date", "region")) %>%
+      filter(!is.na(confirm.x), !is.na(confirm.y)) %>%
+      group_by(date, region) %>%
+      summarise(cases = sum(confirm.x),
+                deaths = sum(confirm.y), .groups = "drop") %>%
+      ungroup()
+
+    ## find lag that maximises mean correlation across UTLAs
+    max <- 28
+    cor <- vapply(seq(0, max), function(lag) {
+      combined %>%
+        group_by(region) %>%
+        mutate(deaths = lead(deaths, n = lag)) %>%
+        filter(!is.na(deaths)) %>%
+        mutate(id = 1:n()) %>%
+        filter(id <= (max(id) - max + lag)) %>%
+        summarise(cor = cor(cases, deaths), .groups = "drop") %>%
+        filter(!is.na(cor)) %>%
+        summarise(mean = mean(cor)) %>%
+        .$mean
+    }, 0)
+
+    set_lag <- which.max(cor) - 1
+    infs[[2]] <- infs[[2]] %>%
+      mutate(date = date - set_lag)
+
+    infs <- lapply(infs, function(x) {
+      x %>%
+        rename(median = confirm) %>%
+        mutate(type = "estimate")
+    })
+  } else {
+    set_lag <- NULL
+  }
+
+  ## link datasets and pivot wider
+  infections <- bind_rows(infs) %>%
+    filter(type == "estimate") %>%
+    select(utla_name = region, date, data, value = median) %>%
+    pivot_wider(names_from = "data") %>%
+    group_by(utla_name) %>%
+    complete(date = seq(min(date), max(date), by = "day")) %>%
+    drop_na()
+
+  ## Define covariates -------------------------------------------------------
+  ## get variant proportion
+  sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+    drop_na(prop_sgtf) %>%
+    filter(week_infection > "2020-10-01")
+
+  week_start <- lubridate::wday(max(sgene_by_utla$week_infection)) - 1
+  ## make infections weekly summary
+  weekly_infections <- infections %>%
+    mutate(week_infection =
+             floor_date(date, "week", week_start = week_start)) %>%
+    select(-date) %>%
+    group_by(utla_name, week_infection) %>%
+    add_count() %>%
+    group_by(utla_name, week_infection, n) %>%
+    summarise_all(sum) %>%
+    filter(n == 7) %>%
+    select(-n)
+
+  ## link with variant proportion
+  deaths_with_cov <- weekly_infections %>%
+    inner_join(sgene_by_utla, by = c("week_infection", "utla_name")) %>%
+    rename(utla = utla_name, region = nhser_name) %>%
+    select(-utla_code)
+
+  ## factorise time
+  deaths_with_cov <- deaths_with_cov %>%
+    mutate(time = factor((week_infection - min(week_infection)) / 7))
+
+  if (!is.null(set_lag)) {
+    deaths_with_cov <- deaths_with_cov %>%
+      mutate(lag = set_lag)
+  }
+
+  return(deaths_with_cov)
 }
-
-# link datasets and pivot wider
-infections <- case_infs %>% 
-  bind_rows(death_infs) %>% 
-  filter(type == "estimate") %>% 
-  select(utla_name = region, date, data, value = median) %>% 
-  pivot_wider(names_from = "data") %>% 
-  group_by(utla_name) %>% 
-  complete(date = seq(min(date), max(date), by = "day")) %>% 
-  mutate(cases = replace_na(cases, 0)) %>% 
-  drop_na(deaths)
-
-# Define covariates -------------------------------------------------------
-# get variant proportion
-sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
-  drop_na(prop_sgtf) %>% 
-  filter(week_infection > "2020-10-01")
-
-# make infections weekly summary
-weekly_infections <- infections %>% 
-  mutate(week_infection = floor_date(date, "week", week_start = wday(max(sgene_by_utla$week_infection)) - 1)) %>% 
-  group_by(utla_name, week_infection) %>%
-  summarise(cases = sum(cases), deaths = sum(deaths), n = n(), .groups = "drop") %>%
-  filter(n == 7) %>%
-  select(-n)
-
-# link with variant proportion
-deaths_with_cov <- weekly_infections %>% 
-  inner_join(sgene_by_utla, by = c("week_infection", "utla_name")) %>% 
-  select(utla = utla_name, week_infection, region = nhser_name, 
-         deaths, cases, prop_sgtf, samples)
-
-# make normalised predictors
-deaths_with_cov <- deaths_with_cov %>% 
-  mutate(normalised_cases = (cases - mean(cases)) / sd(cases),
-         time = as.numeric(week_infection),
-         time = time - min(time),
-         time = (time - mean(time)) / sd(time))
 
 # Define model ------------------------------------------------------------
 # D = c^{+}(1-f)C + c^{-}fC
@@ -115,7 +143,7 @@ deaths_with_cov <- deaths_with_cov %>%
 # effect of the variant on the CFR is assumed to be:
 # c^{-} = \alpha c^{+} or c^{-} = \alpha + c^{+}
 # leading to:
-# D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C 
+# D = (1 - (\alpha - 1)f)c^{+}C or D = (c^{+} + \alpha f)C
 # define custom negative binomial family including variant factor and cases
 variant_nb <- function(additive = FALSE) {
   custom_family(
@@ -186,34 +214,40 @@ nb_model <- function(form, iter = 2000, data = deaths_with_cov,
       control = list(adapt_delta = 0.99),
       warmup = 1000, iter = iter, ...)
 }
+
+df <- list()
+df[["cfr"]] <- get_data("cases", "deaths", "lagged")
+df[["chr"]] <- get_data("cases", "admissions", "lagged")
+admissions_lag <- unique(df[["chr"]]$lag)
+df[["hfr"]] <- get_data("admissions", "deaths", "lagged",
+                        infections_lag = 7 + admissions_lag)
+
 # Fit models --------------------------------------------------------------
 models <- list()
 # define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
-models[["cases"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
-models[["region"]] <- as.formula(deaths ~ region)
-models[["time"]] <- as.formula(deaths ~ s(time, k = 9))
+models[["time"]] <- as.formula(deaths ~ time)
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
-models[["all"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + region + (1 | utla))
-models[["all_with_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5) + region + (1 | utla))
-models[["all_with_regional_residuals"]] <- as.formula(deaths ~ s(normalised_cases, k = 5) + s(time, k = 5, by = region) + (1 | utla))
 
 # core usage
-if (no_cores <= 4) { 
+if (no_cores <= 4) {
   options(mc.cores = no_cores)
   mc_cores <- 1
 }else{
   options(mc.cores = 4)
-  mc_cores <- ceiling(no_cores / 4) 
+  mc_cores <- ceiling(no_cores / 4)
 }
+
 # fit models
 warning("Fitting models sequentially due to mclapply issues")
-fits <- list()
-fits[["multiplicative"]] <- lapply(models, nb_model)
-fits[["additive"]] <- lapply(models, nb_model, additive = TRUE)
+results <- lapply(names(df), function(x) {
+  fits <- list()
+  fits[["multiplicative"]] <- lapply(models, nb_model)
+  fits[["additive"]] <- lapply(models, nb_model, additive = TRUE)
+})
 
 # variant effect ----------------------------------------------------------
-extract_variant_effect <- function(x, additive = FALSE) {  
+extract_variant_effect <- function(x, additive = FALSE) {
   samples <- posterior_samples(x, "alpha")
   q <- samples[, "alpha"]
   q <- quantile(q, c(0.025, 0.5, 0.975))
@@ -221,8 +255,8 @@ extract_variant_effect <- function(x, additive = FALSE) {
   return(q)
 }
 variant_effect <- list()
-variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect) 
-variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE) 
+variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect)
+variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE)
 
 # Compare models ----------------------------------------------------------
 # requires custom log_lik functions to be implemented for variant_nb family
@@ -253,7 +287,7 @@ posterior_predict_variant_nb <- function(i, prep, ...) {
 options(mc.cores = no_cores)
 loos <- list()
 add_loo <- function(fits) {
-  fits %>% 
+  fits %>%
     lapply(add_criterion, "loo") %>%
     lapply(loo, save_psis = TRUE)
 }
@@ -263,10 +297,10 @@ lc <- list()
 lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
 lc[["additive"]] <- loo_compare(loos[["additive"]])
 all_loos <- flatten(loos)
-names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"), 
+names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"),
                      paste0(names(all_loos)[1:length(models)], "_additive"))
 lc[["all"]] <- loo_compare(all_loos)
-  
+
 # Save results ------------------------------------------------------------
 output <- list()
 output$data <- deaths_with_cov
