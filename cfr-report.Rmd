@@ -96,8 +96,8 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
 *Figure 1: Proportion with S gene dropped compared to the adjusted case-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
 
 ```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$lc[["all"]][, "elpd_diff"], 2)) %>%
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
   mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
          model = str_replace_all(model, "_additive", "") %>%
            str_replace_all("_multiplictive", "")) %>%
@@ -164,8 +164,8 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
 *Figure 2: Proportion with S gene dropped compared to the adjusted case-hospitalisation rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of hospitalisations by date of infection.*
 
 ```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$lc[["all"]][, "elpd_diff"], 2)) %>%
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
   mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
          model = str_replace_all(model, "_additive", "") %>%
            str_replace_all("_multiplictive", "")) %>%
@@ -232,8 +232,8 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
 *Figure 3: Proportion with S gene dropped compared to the adjusted hospitalisation-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
 
 ```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$lc[["all"]][, "elpd_diff"], 2)) %>%
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
   mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
          model = str_replace_all(model, "_additive", "") %>%
            str_replace_all("_multiplictive", "")) %>%
