@@ -234,6 +234,7 @@ models <- list()
 models[["intercept"]] <- as.formula(deaths ~ 1)
 models[["time"]] <- as.formula(deaths ~ time)
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
+models[["all"]] <- as.formula(deaths ~ (1 | utla) + time)
 
 ## core usage
 if (no_cores <= 4) {
@@ -313,7 +314,7 @@ add_loo <- function(fits) {
 }
 
 options(mc.cores = no_cores)
-model_loos <- lapply(names(results)[1:2], function(x) {
+model_loos <- lapply(names(results), function(x) {
   fits <- results[[x]]
   loos <- list()
   loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
