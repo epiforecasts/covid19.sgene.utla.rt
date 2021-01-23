@@ -310,7 +310,7 @@ add_loo <- function(fits) {
 }
 
 options(mc.cores = no_cores)
-model_loos <- lapply(names(results), function(x)) {
+model_loos <- lapply(names(results), function(x) {
   fits <- results[[x]]
   loos <- list()
   loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
@@ -323,7 +323,7 @@ model_loos <- lapply(names(results), function(x)) {
                        paste0(names(all_loos)[1:length(models)], "_additive"))
   lc[["all"]] <- loo_compare(all_loos)
   return(list(loos = loos, lc = lc))
-}
+})
 
 # Save results ------------------------------------------------------------
 output <- list()
