@@ -232,9 +232,9 @@ df[["hfr"]] <- get_data("admissions", "deaths", "lagged",
 models <- list()
 ## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
-models[["time"]] <- as.formula(deaths ~ time)
+models[["time"]] <- as.formula(deaths ~ (1 | time))
 models[["utla"]] <- as.formula(deaths ~ (1 | utla))
-models[["all"]] <- as.formula(deaths ~ (1 | utla) + time)
+models[["all"]] <- as.formula(deaths ~ (1 | utla) + (1 | time))
 
 ## core usage
 if (no_cores <= 4) {
