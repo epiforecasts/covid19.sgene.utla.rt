@@ -278,7 +278,7 @@ var_res <- lapply(names(results), function(x) {
 
 ## Compare models ----------------------------------------------------------
 ## requires custom log_lik functions to be implemented for variant_nb family
-expose_functions(fits[[1]][[1]], vectorize = TRUE)
+expose_functions(results[[1]][[1]][[1]], vectorize = TRUE)
 
 log_lik_variant_nb <- function(i, prep) {
   mu <- prep$dpars$mu[, i]
