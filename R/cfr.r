@@ -115,6 +115,7 @@ get_data <- function(from = c("cases", "admissions", "deaths"),
     add_count() %>%
     group_by(utla_name, week_infection, n) %>%
     summarise_all(sum) %>%
+    ungroup() %>%
     filter(n == 7) %>%
     select(-n)
 
@@ -132,6 +133,10 @@ get_data <- function(from = c("cases", "admissions", "deaths"),
     deaths_with_cov <- deaths_with_cov %>%
       mutate(lag = set_lag)
   }
+
+  ## rename everything to cases/deaths to make things easier later
+  deaths_with_cov <- deaths_with_cov %>%
+    rename(!!!c(cases = from, deaths = to))
 
   return(deaths_with_cov)
 }
@@ -242,8 +247,12 @@ if (no_cores <= 4) {
 warning("Fitting models sequentially due to mclapply issues")
 results <- lapply(names(df), function(x) {
   fits <- list()
-  fits[["multiplicative"]] <- lapply(models, nb_model)
-  fits[["additive"]] <- lapply(models, nb_model, additive = TRUE)
+  fits[["multiplicative"]] <-
+    lapply(models, nb_model, data = df[[x]])
+  fits[["additive"]] <-
+    lapply(models, nb_model, data = df[[x]],
+           additive = TRUE)
+  return(fits)
 })
 
 # variant effect ----------------------------------------------------------
@@ -254,10 +263,15 @@ extract_variant_effect <- function(x, additive = FALSE) {
   q <- signif(q, 2)
   return(q)
 }
-variant_effect <- list()
-variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect)
-variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE)
 
+var_res <- lapply(names(results), function(x) {
+  variant_effect <- list()
+
+  variant_effect[["multiplicative"]] <- lapply(fits[["multiplicative"]], extract_variant_effect)
+  variant_effect[["additive"]] <- lapply(fits[["additive"]], extract_variant_effect, additive = TRUE)
+
+  
+})
 # Compare models ----------------------------------------------------------
 # requires custom log_lik functions to be implemented for variant_nb family
 expose_functions(fits[[1]][[1]], vectorize = TRUE)
