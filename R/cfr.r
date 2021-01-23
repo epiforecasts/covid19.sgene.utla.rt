@@ -153,9 +153,9 @@ get_data <- function(from = c("cases", "admissions", "deaths"),
 ## define custom negative binomial family including variant factor and cases
 variant_nb <- function(additive = FALSE) {
   custom_family(
-    "variant_nb", dpars = c("mu", "phi", "alpha"),
-    links = c("logit", "log", "identity"),
-    lb = c(0, 0, ifelse(!additive, 0, NA)),
+    "variant_nb", dpars = c("mu", "phi", "alpha", "epsilon"),
+    links = c("logit", "log", "identity", "log"),
+    lb = c(0, 0, ifelse(!additive, 0, NA), 0),
     type = "int",
     vars = c("f[n]", "cases[n]", "effect[1]")
   )
@@ -164,23 +164,23 @@ variant_nb <- function(additive = FALSE) {
 ## define stan code to scale cfr by cases and variant fraction
 make_stanvars <- function(data, additive = FALSE) {
   stan_funs <- "
-real variant_nb_lpmf(int y, real mu, real phi, real alpha,
+real variant_nb_lpmf(int y, real mu, real phi, real alpha, real epsilon,
                      real f, int cases, int effect) {
     real scaled_cases;
     if (effect) {
-      scaled_cases = (mu + alpha * f) * cases;
+      scaled_cases = (mu + alpha * f) * cases + epsilon;
     }else {
-      scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+      scaled_cases = (1 + (alpha - 1) * f) * mu * cases + epsilon;
     }
     return  neg_binomial_2_lpmf(y | scaled_cases, phi);
                             }
-real variant_nb_rng(int y, real mu, real phi, real alpha,
+real variant_nb_rng(int y, real mu, real phi, real alpha, real epsilon,
                     real f, int cases, int effect) {
     real scaled_cases;
     if (effect) {
-      scaled_cases = (mu + alpha * f) * cases;
+      scaled_cases = (mu + alpha * f) * cases + epsilon;
     }else {
-      scaled_cases = (1 + (alpha - 1) * f) * mu * cases;
+      scaled_cases = (1 + (alpha - 1) * f) * mu * cases + epsilon;
     }
     return  neg_binomial_2_rng(scaled_cases, phi);
                             }
@@ -284,11 +284,12 @@ log_lik_variant_nb <- function(i, prep) {
   mu <- prep$dpars$mu[, i]
   phi <- prep$dpars$phi
   alpha <- prep$dpars$alpha
+  epsilon <- prep$dpars$epsilon
   f <- prep$data$f[i]
   y <- prep$data$Y[i]
   cases <- prep$data$cases[i]
   effect <- prep$data$effect[1]
-  variant_nb_lpmf(y, mu, phi, alpha, f, cases, effect)
+  variant_nb_lpmf(y, mu, phi, alpha, epsilon, f, cases, effect)
 }
 
 posterior_predict_variant_nb <- function(i, prep, ...) {
