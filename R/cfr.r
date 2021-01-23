@@ -258,6 +258,8 @@ results <- lapply(names(df), function(x) {
   return(fits)
 })
 
+names(results) <- names(df)
+
 ## variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {
   samples <- posterior_samples(x, "alpha")
@@ -270,11 +272,12 @@ extract_variant_effect <- function(x, additive = FALSE) {
 var_res <- lapply(names(results), function(x) {
   variant_effect <- list()
   variant_effect[["multiplicative"]] <-
-    lapply(fits[[x]][["multiplicative"]], extract_variant_effect)
+    lapply(results[[x]][["multiplicative"]], extract_variant_effect)
   variant_effect[["additive"]] <-
-    lapply(fits[[x]][["additive"]], extract_variant_effect, additive = TRUE)
+    lapply(results[[x]][["additive"]], extract_variant_effect, additive = TRUE)
   return(variant_effect)
 })
+names(var_res) <- names(df)
 
 ## Compare models ----------------------------------------------------------
 ## requires custom log_lik functions to be implemented for variant_nb family
@@ -300,7 +303,7 @@ posterior_predict_variant_nb <- function(i, prep, ...) {
   y <- prep$data$Y[i]
   cases <- prep$data$cases[i]
   effect <- prep$data$effect[1]
-  variant_nb_rng(mu, phi, alpha, f, cases, effect)
+  variant_nb_rng(mu, phi, alpha, epsilon, f, cases, effect)
 }
 
 add_loo <- function(fits) {
@@ -310,7 +313,7 @@ add_loo <- function(fits) {
 }
 
 options(mc.cores = no_cores)
-model_loos <- lapply(names(results), function(x) {
+model_loos <- lapply(names(results)[1:2], function(x) {
   fits <- results[[x]]
   loos <- list()
   loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
@@ -324,12 +327,17 @@ model_loos <- lapply(names(results), function(x) {
   lc[["all"]] <- loo_compare(all_loos)
   return(list(loos = loos, lc = lc))
 })
+names(model_loos) <- names(df)
 
 # Save results ------------------------------------------------------------
-output <- list()
-output$data <- df
-output$fits <- results
-output$effect <- var_res
-output$loos <- model_loos$loos
-output$lc <- model_loos$lc
-saveRDS(output, here("output", "associations.rds"))
+to_save <- lapply(names(df), function(x) {
+  output <- list()
+  output$data <- df[[x]]
+  output$fits <- results[[x]]
+  output$effect <- var_res[[x]]
+  output$loos <- model_loos[[x]]
+  return(output)
+})
+names(to_save) <- names(df)
+
+saveRDS(to_save, here("output", "associations.rds"))
