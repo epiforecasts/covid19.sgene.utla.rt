@@ -326,9 +326,9 @@ model_loos <- lapply(names(results), function(x)) {
 
 # Save results ------------------------------------------------------------
 output <- list()
-output$data <- deaths_with_cov
-output$fits <- fits
-output$effect <- variant_effect
-output$loos <- loos
-output$lc <- lc
-saveRDS(output, here("output", "cfr.rds"))
+output$data <- df
+output$fits <- results
+output$effect <- var_res
+output$loos <- model_loos$loos
+output$lc <- model_loos$lc
+saveRDS(output, here("output", "associations.rds"))
