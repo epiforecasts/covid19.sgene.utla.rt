@@ -53,7 +53,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
-  brm_convolution(formula, control = list(adapt_delta = 0.98, max_treedepth = 12),
+  brm_convolution(formula, control = list(adapt_delta = 0.99, max_treedepth = 12),
                   iter = 3000, cores = stan_cores, ...)
 }
 
@@ -67,21 +67,18 @@ priors[["hfr"]] <- c(prior("normal(-1, 0.5)", class = "Intercept"))
 fit_targets <- expand_grid(loc = c("region", "utla"), conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
 
-fit_targets <- fit_targets %>% 
-  filter(loc %in% "region", conv %in% "fixed")
-
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
-  message("Fitting ", ft$target, " at the ", ft$loc, " using following convolution: ", ft$conv)
+  message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
   out <- list()
-  fits <- lapply(models, fit_brm_convolution,
+  fits <- suppressMessages(lapply(models, fit_brm_convolution,
                 data = df[[ft$loc]][[ft$target]],
                 prior = priors[[ft$target]],
-                conv_varying = ft$conv)
+                conv_varying = ft$conv))
   ft$models <- list(names(models))
   ft$fit <- list(fits)
   ft <- unnest(ft, cols = c("models", "fit"))
-  return(out)},
+  return(ft)},
   future.scheduling = Inf, future.seed = TRUE)
 
 fits <- reduce(fits, bind_rows)
@@ -98,4 +95,6 @@ fits <- fits %>%
   })) %>% 
   mutate(variant_effect =  map_chr(variant_effect_q,
                                    ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
+
+saveRDS(fits, here("output", "convolution-associations.rds"))
 
