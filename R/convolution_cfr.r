@@ -7,12 +7,12 @@ library(vroom)
 library(lubridate)
 library(brms)
 library(data.table)
-library(parallel)
 library(loo)
+library(future)
+library(future.apply)
 
 # set number of parallel cores
-no_cores <- detectCores()
-options(mc.cores = no_cores)
+no_cores <- availableCores()
 
 # Get functions -----------------------------------------------------------
 source(here("R", "brm_convolution.r"))
@@ -33,36 +33,69 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 
 # Define model ------------------------------------------------------------
 models <- list()
-## define models to fit
+
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
 models[["time"]] <- as.formula(secondary ~ (1 | time) + prop_sgtf)
 models[["utla"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
 models[["all"]] <- as.formula(secondary ~ (1 | loc) + (1 | time) + prop_sgtf)
 
-
 # Fit models --------------------------------------------------------------
+# set up parallel
+## core usage
+if (no_cores <= 4) {
+  stan_cores <- no_cores
+  mc_cores <- 1
+} else {
+  stan_cores <- 4
+  mc_cores <- ceiling(no_cores / 4)
+}
+plan("multisession", workers = mc_cores, earlySignal = TRUE)
+
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
-  brm_convolution(formula, control = list(adapt_delta = 0.95, max_treedepth = 12),
-                  iter = 3000, ...)
+  brm_convolution(formula, control = list(adapt_delta = 0.98, max_treedepth = 12),
+                  iter = 3000, cores = stan_cores, ...)
 }
 
-mc_cores <- length(models)
-
-# set context specific priors
-priors <- c(prior("normal(-4, 0.5)", class = "Intercept"))
+# set context specific priors (based on mean in data)
+priors <- list()
+priors[["cfr"]] <- c(prior("normal(-4, 0.5)", class = "Intercept"))
+priors[["chr"]] <- c(prior("normal(-2.5, 0.5)", class = "Intercept"))
+priors[["hfr"]] <- c(prior("normal(-1, 0.5)", class = "Intercept"))
 
 # fit model grid in parallel
 fit_targets <- expand_grid(loc = c("region", "utla"), conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
 
-fits <- mclapply(1:nrow(fit_targets), function(i) {
+fit_targets <- fit_targets %>% 
+  filter(loc %in% "region", conv %in% "fixed")
+
+fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
+  message("Fitting ", ft$target, " at the ", ft$loc, " using following convolution: ", ft$conv)
   out <- list()
-  fit <- lapply(models, fit_brm_convolution,
+  fits <- lapply(models, fit_brm_convolution,
                 data = df[[ft$loc]][[ft$target]],
+                prior = priors[[ft$target]],
                 conv_varying = ft$conv)
-  names(fit) <- names(models)
-  out[[ft$target]][[ft$loc]][[ft$conv]] <- fit
-  return(out)}, mc.cores = mc_cores)
+  ft$models <- list(names(models))
+  ft$fit <- list(fits)
+  ft <- unnest(ft, cols = c("models", "fit"))
+  return(out)},
+  future.scheduling = Inf, future.seed = TRUE)
+
+fits <- reduce(fits, bind_rows)
+
+# Extract rate summary ----------------------------------------------------
+fits <- fits %>% 
+  mutate(variant_effect_q = map(fit, function(x) {
+    samples <- posterior_samples(x, "b_prop_sgtf")
+    q <- samples[, "b_prop_sgtf"]
+    q <- exp(q)
+    q <- quantile(q, c(0.025, 0.5, 0.975))
+    q <- signif(q, 2)
+    return(q)
+  })) %>% 
+  mutate(variant_effect =  map_chr(variant_effect_q,
+                                   ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
 

@@ -46,10 +46,10 @@ results <- lapply(names(df), function(x) {
   fits <- list()
   cat(x, "multiplicative\n")
   fits[["multiplicative"]] <-
-    lapply(models, variant_model, data = df[[x]])
+    mclapply(models, variant_model, data = df[[x]], mc.cores = mc_cores)
   cat(x, "additive\n")
   fits[["additive"]] <-
-    lapply(models, variant_model, data = df[[x]],
+    mclapply(models, variant_model, data = df[[x]], mc.cores = mc_cores,
            additive = TRUE)
   return(fits)
 })

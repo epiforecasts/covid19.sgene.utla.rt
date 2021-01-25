@@ -60,8 +60,7 @@ real variant_nb_rng(int y, real mu, real phi, real alpha, real epsilon,
 }
 
 ## define model function
-variant_model <- function(form, iter = 2000, data = deaths_with_cov,
-                     additive = FALSE, ...) {
+variant_model <- function(form, iter = 2000, data, additive = FALSE, ...) {
   # define priors
   if (additive) {
     priors <- c(prior(normal(0, 0.01), class = alpha))
