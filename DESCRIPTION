@@ -29,3 +29,4 @@ Description: Local area reproduction numbers and S-gene target failure.
 RoxygenNote: 7.1.0
 NeedsCompilation: no
 Language: en-GB
+License: MIT + file LICENSE

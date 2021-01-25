@@ -1,7 +1,7 @@
 
 # Local area reproduction numbers and S-gene target failure
 
-This repository contains the data and code for our report exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://github.com/epiforecasts/covid19.sgene.ltla.rt/report.pdf/).
+This repository contains the data and code for our report exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://raw.githubusercontent.com/epiforecasts/covid19.sgene.utla.rt/main/report.pdf).
 
 ## Reproducibility
 
@@ -26,13 +26,13 @@ devtools::install_deps()
 
 ### Code
 
-Rt estimates from the [EpiForecasts](http://epiforecasts.io/covid) web site can be updated using
+Rt estimates from the [EpiForecasts](http://epiforecasts.io/covid) web site can be updated using (here and following in the working directory of the analysis):
 
 ```r
 source(here::here("R/extract_rt.r"))
 ```
 
-All publicly available covariates can be re-extracted using (here and following in the working directory of the analysis):
+All publicly available covariates can be re-extracted using:
 
 ```r
 source(here::here("R/extract_public_data.r"))
