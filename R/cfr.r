@@ -315,6 +315,12 @@ options(mc.cores = no_cores)
 yrep <- lapply(names(results), function(x)  lapply(results[[x]], posterior_predict))
 names(yrep) <- names(df)
 
+psis <- lapply(names(results), function(x) {
+  fits <- results[[x]]
+  lapply(fits, function(x) psis(-log_lik(x))
+})
+names(psis) <- names(df)
+
 model_loos <- lapply(names(results), function(x) {
   fits <- results[[x]]
   loos <- add_loo(fits)
