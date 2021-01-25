@@ -23,6 +23,7 @@
 #' @export
 #' @importFrom data.table as.data.table setorder
 #' @importFrom brms brm make_stancode custom_family stanvar
+#' @author Sam Abbott
 brm_convolution <- function(formula, data, conv_mean = c(2.5, 1),
                             conv_sd = c(1, 0.5), conv_max = 30, 
                             conv_varying = "fixed", hold_out_time = 28, 

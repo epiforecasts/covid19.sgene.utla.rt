@@ -1,4 +1,4 @@
-##' Get a combined data set of two epidemiological indicators
+##' Get a combined data set of two epidemiological indicators by date of infection
 ##'
 ##' Indicators will be matched to the time of the "from" indicator, with a lag
 ##' given by \code{infections_lag}
