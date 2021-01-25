@@ -54,7 +54,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
   brm_convolution(formula, control = list(adapt_delta = 0.99, max_treedepth = 12),
-                  iter = 3000, cores = stan_cores, ...)
+                  iter = 4000, cores = stan_cores, ...)
 }
 
 # set context specific priors (based on mean in data)
