@@ -30,7 +30,7 @@
 #' @author Sam Abbott
 brm_convolution <- function(formula, data, conv_mean = c(2.5, 1),
                             conv_sd = c(1, 0.5), conv_max = 30, 
-                            conv_varying = "fixed", hold_out_time = 28, 
+                            conv_varying = "fixed", hold_out_time = 21, 
                             dry_run = FALSE, ...) {
   
   conv_varying <- match.arg(conv_varying, choices = c("fixed", "loc"))
@@ -222,7 +222,6 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
   }"))
     )
   }
-
 
   stanvars <- c(
     stan_functions,
