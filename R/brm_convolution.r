@@ -1,5 +1,9 @@
 #' Convolution brm Wrappers
 #'
+#' @description A wrapper for `brms::brm` that implements a custom model where a 
+#' secondary indicator is predicted by a primary indicator over some convolution and 
+#' scaled by a some fraction. The fraction can then be modelled using the regression
+#' framework of `brms`. 
 #' @param formula A model formula
 #' @param data A data.frame that must contain the date, location (as loc), primary
 #' (the data that the outcome is a convolution of) and at least the outcome as 

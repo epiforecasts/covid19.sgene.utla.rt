@@ -13,58 +13,35 @@ library(loo)
 # set number of parallel cores
 no_cores <- detectCores()
 options(mc.cores = no_cores)
-# Data --------------------------------------------------------------------
-# get raw cases by data of infection from epiforecasts.io 
-cases <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                          "master/subnational/united-kingdom-local/cases/summary/reported_cases.csv")) %>% 
-  mutate(data = "cases")
-# get raw deaths by data of infection from epiforecasts.io 
-deaths <- vroom(paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
-                           "master/subnational/united-kingdom-local/deaths/summary/reported_cases.csv")) %>% 
-  mutate(data = "deaths")
 
-# link datasets and pivot wider
-reports <- cases %>% 
-  bind_rows(deaths) %>% 
-  select(utla_name = region, date, data, value = confirm) %>% 
-  pivot_wider(names_from = "data")
+# Get functions -----------------------------------------------------------
+source(here("R", "brm_convolution.r"))
+source(here("R", "get_notifications_data.r"))
 
-# Define covariates -------------------------------------------------------
-# get variant proportion
-sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
-  drop_na(prop_sgtf) %>% 
-  mutate(week_specimen = week_infection + 7) %>% 
-  filter(week_specimen > "2020-10-01") %>% 
-  group_by(utla_name,week_specimen) %>% 
-  slice()
+# Get data ----------------------------------------------------------------
+df <- list()
 
-# add week indicator
-reports <- reports %>% 
-  mutate(week_specimen = floor_date(date, "week", week_start = wday(max(sgene_by_utla$week_specimen)) - 1))
+# all data combinations by UTLA
+df[["utla"]][["cfr"]] <- get_notifications_data("cases", "deaths")
+df[["utla"]][["chr"]] <- get_notifications_data("cases", "admissions")
+df[["utla"]][["hfr"]] <- get_notifications_data("admissions", "deaths")
 
-# link with variant proportion
-secondary_with_cov <- reports %>% 
-  inner_join(sgene_by_utla, by = c("week_specimen", "utla_name")) %>% 
-  select(utla = utla_name, date, week_specimen, region = nhser_name, 
-         deaths, cases, prop_sgtf, samples)
-
-# make normalised predictors
-secondary_with_cov <- secondary_with_cov %>% 
-  mutate(normalised_cases = (cases - mean(cases)) / sd(cases),
-         time = as.numeric(date),
-         time = time - min(time),
-         time = (time - mean(time)) / sd(time))
-
-# filter to a reduced set for testing
-secondary_with_cov <- secondary_with_cov %>%
-  rename(loc = utla, primary = cases) 
+# all data combinations by NHS region
+df[["region"]][["cfr"]] <- get_notifications_data("cases", "deaths", level = "nhs region")
+df[["region"]][["chr"]] <- get_notifications_data("cases", "admissions", level = "nhs region")
+df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level = "nhs region")
 
 # Define model ------------------------------------------------------------
-source(here("R/brm_convolution.r"))
+models <- list()
+## define models to fit
+models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
+models[["time"]] <- as.formula(secondary ~ (1 | time) + prop_sgtf)
+models[["utla"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
+models[["all"]] <- as.formula(secondary ~ (1 | loc) + (1 | time) + prop_sgtf)
 
 # set context specific priors
 priors <- c(prior("normal(-4, 0.5)", class = "Intercept"))
 
 # fit model
-fit <- brm_convolution(deaths ~  (1 | loc) + prop_sgtf, data = secondary_with_cov, 
+fit <- brm_convolution(secondary ~ (1 | loc) + prop_sgtf, data = df[["region"]][["hfr"]], 
                          prior = priors)
