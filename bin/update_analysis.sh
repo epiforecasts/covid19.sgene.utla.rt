@@ -3,6 +3,9 @@
 # update deps
 Rscript -e "install.packages('devtools'); devtools::install_deps()"
 
+# update Rt trajectories
+Rscript R/extract_rt.r
+
 # update data
 Rscript R/extract_public_data.r
 
