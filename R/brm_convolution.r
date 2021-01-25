@@ -1,9 +1,34 @@
-library(data.table)
-library(brms)
-
+#' Convolution brm Wrappers
+#'
+#' @param formula A model formula
+#' @param data A data.frame that must contain the date, location (as loc), primary
+#' (the data that the outcome is a convolution of) and at least the outcome as 
+#' specifed in `formula`.
+#' @param conv_mean Numeric vector defining the prior for the log mean of the convolution 
+#' (mean and standard deviation).
+#' @param conv_sd Numeric vector defining the prior for the standard deviation of the
+#' convolution (mean and standard deviation).
+#' @param conv_max Integer defining the maximum index to use for the convolution.
+#' @param conv_varying A character string defining the variability of the convolution 
+#' distribution. By default this is fixed by other supported options include allowing 
+#' the convolution distribution to vary across location (using a random effect).
+#' @param hold_out_time Integer, number of days to hold out from the likelihood. This 
+#' is useful as initially the outcome will depend on primary data outside of the range of
+#' the training set. 
+#' @param dry_run Logical, defaults to TRUE. For testing purposes should just the `stan`
+#' code be output with not fitting done.
+#' @param ... Additional parameters passed to `brms::brm`.
+#'
+#' @return A ""brmsfit" object.
+#' @export
+#' @importFrom data.table as.data.table setorder
+#' @importFrom brms brm make_stancode custom_family stanvar
 brm_convolution <- function(formula, data, conv_mean = c(2.5, 1),
-                            conv_sd = c(1, 0.5), conv_max = 30, conv_varying = FALSE, 
-                              hold_out_time = 28, dry_run = FALSE, ...) {
+                            conv_sd = c(1, 0.5), conv_max = 30, 
+                            conv_varying = "fixed", hold_out_time = 28, 
+                            dry_run = FALSE, ...) {
+  
+  conv_varying <- match.arg(conv_varying, choices = c("fixed", "loc"))
   
   # order data
   data <- as.data.table(data)
@@ -40,10 +65,6 @@ brm_convolution <- function(formula, data, conv_mean = c(2.5, 1),
     if (locs > 1) {
       uli <- c(uli, 1 + ult[1:(locs - 1)])
       li <- c(li, 1 + lt[1:(locs - 1)])
-    }
-    
-    if (locs == 1) {
-      conv_varying <- FALSE
     }
     
     conv_nb_lik <- "
@@ -143,19 +164,20 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
             name = "conv_max")
   )
   
-  stan_parameters <- c(
-    stanvar(block = "parameters",
-            scode = "  
+  if (conv_varying %in% "loc") {
+    stan_parameters <- c(
+      stanvar(block = "parameters",
+              scode = "  
   real conv_mean;
   real<lower=0> conv_sd;
   real<lower=0> conv_mean_loc_sd;
   real<lower=0> conv_sd_loc_sd;
   real conv_mean_loc[locs];
   real<lower=0> conv_sd_loc[locs];"))
-  
-  stan_cmodel <- c(
-    stanvar(block = "model",
-            scode = paste0("  
+    
+    stan_cmodel <- c(
+      stanvar(block = "model",
+              scode = paste0("  
   vector[N] conv_primary;
   
   conv_mean ~ normal(", conv_mean[1], ",", conv_mean[2], ");
@@ -172,7 +194,33 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
     conv_primary[li[s]:lt[s]] = convolve(to_vector(primary[uli[s]:ult[s]]), pmf, ut);
     }
       "))
-  )
+    )
+  }else{
+    stan_parameters <- c(
+      stanvar(block = "parameters",
+              scode = "  
+  real conv_mean;
+  real<lower=0> conv_sd;"))
+    
+    stan_cmodel <- c(
+      stanvar(block = "model",
+              scode = paste0("  
+  vector[N] conv_primary;
+  vector[conv_max] pmf;
+   
+  conv_mean ~ normal(", conv_mean[1], ",", conv_mean[2], ");
+  conv_sd ~ normal(", conv_sd[1], ",", conv_sd[2], ") T[0,];
+  for (s in 1:locs) {
+    conv_sd_loc[s] ~ normal(conv_sd, conv_mean_loc_sd) T[0,];
+  }
+  pmf = calc_pmf(conv_mean, conv_sd, conv_max);
+  
+  for (s in 1:locs) {
+    conv_primary[li[s]:lt[s]] = convolve(to_vector(primary[uli[s]:ult[s]]), pmf, ut);
+  }"))
+    )
+  }
+
 
   stanvars <- c(
     stan_functions,
@@ -187,7 +235,9 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
   return(list(family = conv_nb, other = stanvars))
 }
   
-conv_stan <- make_convolution_stan(data, primary, max_conv = max_conv, conv_varying = conv_varying,
+conv_stan <- make_convolution_stan(data, primary,
+                                   max_conv = max_conv, 
+                                   conv_varying = conv_varying,
                                    ut = hold_out_time)
 
 if (dry_run) {
