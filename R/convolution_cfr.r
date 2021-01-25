@@ -6,6 +6,7 @@ library(purrr)
 library(vroom)
 library(lubridate)
 library(brms)
+library(data.table)
 library(parallel)
 library(loo)
 
@@ -59,13 +60,11 @@ secondary_with_cov <- secondary_with_cov %>%
   rename(loc = utla, primary = cases) 
 
 # Define model ------------------------------------------------------------
-source(here("R/convolution_model.r"))
+source(here("R/brm_convolution.r"))
 
 # set context specific priors
 priors <- c(prior("normal(-4, 0.5)", class = "Intercept"))
 
 # fit model
-fit <- convolution_model(deaths ~  (1 | loc) + s(time, k = 5), data = secondary_with_cov, 
+fit <- brm_convolution(deaths ~  (1 | loc) + prop_sgtf, data = secondary_with_cov, 
                          prior = priors)
-
-saveRDS(fit, "cfr-fit.rds")

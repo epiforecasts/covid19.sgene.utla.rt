@@ -210,11 +210,8 @@ vector calc_pmf(real conv_mean, real conv_sd, int conv_max) {
    
   conv_mean ~ normal(", conv_mean[1], ",", conv_mean[2], ");
   conv_sd ~ normal(", conv_sd[1], ",", conv_sd[2], ") T[0,];
-  for (s in 1:locs) {
-    conv_sd_loc[s] ~ normal(conv_sd, conv_mean_loc_sd) T[0,];
-  }
-  pmf = calc_pmf(conv_mean, conv_sd, conv_max);
   
+  pmf = calc_pmf(conv_mean, conv_sd, conv_max);
   for (s in 1:locs) {
     conv_primary[li[s]:lt[s]] = convolve(to_vector(primary[uli[s]:ult[s]]), pmf, ut);
   }"))
