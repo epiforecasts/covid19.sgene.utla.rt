@@ -1,6 +1,6 @@
 ---
-title: "Association between S-gene target failure and the case fatality rate of Covid-19"
-subtitle: "Preliminary analysis - not yet peer reviewed"
+title: "Population-level association between S-gene target failure and the relationship between cases, hospitalisations and deaths of Covid-19"
+subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
 date: 12 January, 2021
@@ -27,55 +27,55 @@ library(stringr)
 library(purrr)
 library(scales)
 
-cfr <- readRDS(here("output", "cfr.rds"))
+assoc <- readRDS(here("output", "associations.rds"))
 ```
 
 For correspondence: sebastian.funk@lshtm.ac.uk
 
-# Aim 
+# Aim
 
-Explore the association between S-gene target failure and the case fatality rate of Covid-19 using test positive Covid-19 notifications by UTLA and Covid-19 deaths by UTLA.
+Explore the association between S-gene target failure and the relationship between test-positive cases, Covid-19 hospitalisations and Covid-19 deaths by Upper-tier Local Authority (UTLA) at the population level.
 
 # Method
 
 ## Data
 
-We used 3 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], hospitalisations with Covid-19 by UTLA [@covidnhsdata], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly level and restricted the analysis to the period beginning Monday, 5 October.
 
 ## Statistical analysis
 
-We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority and adjusted to date of infection from date of specimen by shifting all estimates back by a week. We adjusted cases and deaths at the local authority level from date of notification to date of infection using the deconvolution method described in in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2] (without any adjust for the fraction of latents reported in each dataset). Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/cases_by_infection.csv). We used central estimates without uncertainty and aggregated by week of infection.
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority and adjusted to date of infection from date of specimen by shifting all estimates back by a week. We estimated pairwise fixed lags between cases, admissions and deaths by maximising Pearson's correlation coefficient. We aggregated all data by week of infection.
 
-We assumed that the observed number of Covid-19 deaths ($D_{i,t}$) within 28 days by date of infection were a function of Covid-19 notifications ($C_{i,t}$) by date of infection scaled by the case fatality rate of S-gene positive cases ($c^+$) and S-gene negative cases ($c^-$), 
+We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) within 28 days by date of infection were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of infection scaled by the case fatality rate of S-gene positive cases ($c^+$) and S-gene negative cases ($c^-$),
 
 $$D_{i,t} \sim \mathrm{NB}\left(c^{+}\left(1-f_{it}\right)C_{i,t} + c^{-}f_{it}C_{i,t},  \phi \right)$$
-where $i$ indicates UTLA, $t$ week of infection, and $f_{it}$ is the fraction of cases that were found to be S-gene negative by UTLA each week. The case fatality rate of S-gene negative cases then assumed was then assumed to be a function of static local variation, normalised Covid-19 notifications by date of infection, and residual temporal variation.
+where $i$ indicates UTLA, $t$ week of infection, and $f_{it}$ is the fraction of cases that were found to be S-gene negative by UTLA each week. The case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively) of S-gene negative cases then assumed was then assumed to be a function of static local variation, normalised Covid-19 notifications by date of infection, and residual temporal variation.
 
-$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_i + \beta C_{i,t} + s(t) \right)$$
-where $\gamma_i$ is a UTLA-level intercept corresponding to the baseline case fatality rate, $\beta$ is the contribution of case load (represented by normalised notifications by date of infection), and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline, the sum of a static regional parameter and a national spline. 
+$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_{i,t}\right)$$
+where $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with each time point treated as independent. In other words, we stratify the data set either by UTLA or by week and determine whether differences in the associations between cases, admissions and deaths are explained by changes in proportion of cases that are SGTF over time and space, respectively.
 
 The S-gene negative case fatality rate was then assumed to be related to the S-gene positive case fatality rate via a multiplicative relationship,
 
-$$c^{-} = \alpha c^{+}$$ 
+$$c^{-} = \alpha c^{+}$$
 
-or an additive relationship 
+or an additive relationship
 
 $$c^{-} = \alpha + c^{+}$$
 
-where $\alpha$ represents either the multiplicative change in case fatality rate or the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.  
+where $\alpha$ represents either the multiplicative change in case fatality rate or the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.
 
 All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
 
 # Results
 
-```{r load-models, echo = FALSE}
-effect_size <- function(type = "additive", model = "all", pos = 2, effects = cfr$effect) {
-  paste0(effects[[type]][[model]][pos] * 100,"%")
-}
+## Cases and deaths
+
+```{r cfr,echo = FALSE}
+cfr <- assoc$cfr
 ```
 
-```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
-prop_data <- cfr$data %>% 
+```{r cfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+prop_data <- cfr$data %>%
   mutate(cfr = deaths / cases)
 
 suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
@@ -83,7 +83,7 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
   geom_jitter(pch = 21) +
   facet_wrap(. ~ week_infection) +
   scale_fill_brewer("", palette = "Set1") +
-  scale_y_continuous(labels = percent) + 
+  scale_y_continuous(labels = percent) +
   xlab("Proportion with S gene dropped") +
   ylab("Case fatality rate") +
   theme_cowplot() +
@@ -93,55 +93,189 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
         legend.box = "vertical"))
 ```
 
-*Figure 1: Proportion with S gene dropped compared to the adjusted case fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
+*Figure 1: Proportion with S gene dropped compared to the adjusted case-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
 
 ```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$lc[["all"]][, 1]), `ELPD difference` = round(cfr$lc[["all"]][, "elpd_diff"], 2)) %>% 
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
   mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
-         model = str_replace_all(model, "_additive", "") %>% 
-           str_replace_all("_multiplictive", "")) %>% 
-  mutate(pretty_model =  str_replace_all(model, "_", " ")%>% 
+         model = str_replace_all(model, "_additive", "") %>%
+           str_replace_all("_multiplictive", "")) %>%
+  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
            str_to_sentence(),
-         Type = type %>% 
-           str_to_sentence()) %>% 
+         Type = type %>%
+           str_to_sentence()) %>%
   mutate(pretty_model = case_when(
-    pretty_model == "All" ~ "All covariates",
-    pretty_model == "All with residuals" ~ "All covariates with national time-varying",
-    pretty_model == "All with regional residuals" ~ "All covariates with regional time-varying", 
     pretty_model == "Utla" ~ "UTLA",
     TRUE ~ pretty_model
-  )) %>% 
+  )) %>%
   select(Type, type, pretty_model, model, `ELPD difference`)
-  
+
 lc %>%
-  select(Type, Model = pretty_model, `ELPD difference`) %>% 
+  select(Type, Model = pretty_model, `ELPD difference`) %>%
   kbl() %>%
   kable_styling()
 ```
 *Table 1: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
 
 
-```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
+```{r cfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
-  paste0(var * 100, "%")
+  paste0(var)
 }
-effects <- lc %>% 
-  select(- `ELPD difference`) %>% 
+effects <- lc %>%
+  select(-`ELPD difference`) %>%
   mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
-         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>% 
-  select(-model, -type) %>% 
-  pivot_wider(names_from = Type, values_from = effect) %>% 
+         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
+  select(-model, -type) %>%
+  pivot_wider(names_from = Type, values_from = effect) %>%
   rename(Model = pretty_model)
 
 effects %>%
   kbl() %>%
   kable_styling()
 ```
-*Table 2: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case fatality rate.*
+*Table 2: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case-fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case-fatality rate.*
+
+## Cases and hospitalisations
+
+```{r chr,echo = FALSE}
+cfr <- assoc$chr
+```
+
+```{r chr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+prop_data <- cfr$data %>%
+  mutate(cfr = deaths / cases)
+
+suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
+                      fill = region, size = deaths)) +
+  geom_jitter(pch = 21) +
+  facet_wrap(. ~ week_infection) +
+  scale_fill_brewer("", palette = "Set1") +
+  scale_y_continuous(labels = percent) +
+  xlab("Proportion with S gene dropped") +
+  ylab("Case hospitalisation rate") +
+  theme_cowplot() +
+  labs(size = paste("Hospitalisations")) +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "vertical"))
+```
+*Figure 2: Proportion with S gene dropped compared to the adjusted case-hospitalisation rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of hospitalisations by date of infection.*
+
+```{r echo = FALSE, results = 'asis'}
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
+  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
+         model = str_replace_all(model, "_additive", "") %>%
+           str_replace_all("_multiplictive", "")) %>%
+  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
+           str_to_sentence(),
+         Type = type %>%
+           str_to_sentence()) %>%
+  mutate(pretty_model = case_when(
+    pretty_model == "Utla" ~ "UTLA",
+    TRUE ~ pretty_model
+  )) %>%
+  select(Type, type, pretty_model, model, `ELPD difference`)
+
+lc %>%
+  select(Type, Model = pretty_model, `ELPD difference`) %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 3: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
+
+
+```{r chr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
+to_per <- function(var) {
+  paste0(var)
+}
+effects <- lc %>%
+  select(-`ELPD difference`) %>%
+  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
+         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
+  select(-model, -type) %>%
+  pivot_wider(names_from = Type, values_from = effect) %>%
+  rename(Model = pretty_model)
+
+effects %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 4: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case-hospitalisation rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case-hospitalisation rate.*
+
+## Hospitalisations and deaths
+
+```{r hfr,echo = FALSE}
+cfr <- assoc$hfr
+```
+
+```{r hfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+prop_data <- cfr$data %>%
+  mutate(cfr = deaths / cases)
+
+suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
+                      fill = region, size = deaths)) +
+  geom_jitter(pch = 21) +
+  facet_wrap(. ~ week_infection) +
+  scale_fill_brewer("", palette = "Set1") +
+  scale_y_continuous(labels = percent) +
+  xlab("Proportion with S gene dropped") +
+  ylab("Hospitalisation-fatality rate") +
+  theme_cowplot() +
+  labs(size = paste("Deaths")) +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "vertical"))
+```
+*Figure 3: Proportion with S gene dropped compared to the adjusted hospitalisation-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
+
+```{r echo = FALSE, results = 'asis'}
+lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
+             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
+  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
+         model = str_replace_all(model, "_additive", "") %>%
+           str_replace_all("_multiplictive", "")) %>%
+  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
+           str_to_sentence(),
+         Type = type %>%
+           str_to_sentence()) %>%
+  mutate(pretty_model = case_when(
+    pretty_model == "Utla" ~ "UTLA",
+    TRUE ~ pretty_model
+  )) %>%
+  select(Type, type, pretty_model, model, `ELPD difference`)
+
+lc %>%
+  select(Type, Model = pretty_model, `ELPD difference`) %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 5: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
+
+
+```{r hfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
+to_per <- function(var) {
+  paste0(var)
+}
+effects <- lc %>%
+  select(-`ELPD difference`) %>%
+  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
+         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
+  select(-model, -type) %>%
+  pivot_wider(names_from = Type, values_from = effect) %>%
+  rename(Model = pretty_model)
+
+effects %>%
+  kbl() %>%
+  kable_styling()
+```
+*Table 6: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the hospitalisation-fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive hospitalisation-fatality rate.*
 
 # Discussion
 
-We studied the relationship between SGTF (as a proxy for the new variant of concern) and the case fatality rate of Covid-19 adjusted using both an additive and a multiplicative relationship. We considered a range of confounders and explored residual variation on both a national and regional level. Models that adjusted for residual variation fitted the data best but may make interpreting effect sizes difficult. In models that did not adjust for residual variation the best fitting model, that included all covariates, indicated that S-gene negativity was associated with an increase in the baseline case fatality rate though the presence of unmeasured confounders is likely. Models that included the SGTF as an additive effect fit the data better than those that treated it as multiplicative. Additional work is needed before these results can be interpreted further. 
+We studied the relationship between SGTF (as a proxy for the new variant of concern) and the association between Covid-19 cases, hospitalisations and deaths adjusted using both an additive and a multiplicative relationship. We considered space and time as confounders.
 
 # References
 
