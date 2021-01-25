@@ -280,3 +280,48 @@ We studied the relationship between SGTF (as a proxy for the new variant of conc
 # References
 
 <div id = 'refs'></div>
+
+# Appendix: fits
+
+```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
+## calculate predicted intervals
+plot_pred_int <- function(data, yrep, psis, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
+
+  y <- data$deaths
+  ## construct predicted quantiles
+  pred_int <- suppressWarnings(E_loo(
+    x = yrep,
+    psis_object = psis,
+    type = "quantile",
+    probs = quantiles
+  )$value) %>%
+  t() %>%
+  `colnames<-`(quantiles) %>%
+  as_tibble() %>%
+  bind_cols(y = y) %>%
+  bind_cols(data) %>%
+  arrange(`0.5`) %>%
+  group_by(week_infection) %>%
+  mutate(id = 1:n()) %>%
+  ungroup()
+
+  p <- ggplot(pred_int, aes(x = id, y = y)) +
+    geom_point(size = 0.25) +
+    geom_ribbon(aes(ymin = `0.25`, ymax = `0.75`), alpha = 0.3) +
+    geom_ribbon(aes(ymin = `0.05`, ymax = `0.95`), alpha = 0.15) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    facet_wrap(. ~ week_infection, scales = "free_y") +
+    xlab("Local area") +
+    ylab("Deaths") +
+    theme_cowplot() +
+    theme(axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank())
+
+  print(p)
+}
+
+p <- plot_pred_int(hfr$data, hfr$yrep[["all"]], hfr$psis[["all"]])
+print(p)
+```
+
