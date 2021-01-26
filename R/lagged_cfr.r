@@ -6,7 +6,8 @@ library(purrr)
 library(vroom)
 library(lubridate)
 library(brms)
-library(parallel)
+library(future)
+library(future.apply)
 library(loo)
 
 # set number of parallel cores
@@ -36,9 +37,8 @@ models <- list()
 ## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
 models[["primary"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
-models[["utla"]] <- as.formula(deaths ~ (1 | loc))
+models[["loc"]] <- as.formula(deaths ~ (1 | loc))
 models[["all"]] <- as.formula(deaths ~ (1 | loc) + s(normalised_cases, k = 5))
-
 
 ## Fit models --------------------------------------------------------------
 
@@ -50,66 +50,49 @@ if (no_cores <= 4) {
   options(mc.cores = 4)
   mc_cores <- ceiling(no_cores / 4)
 }
+plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
-## fit models
-results <- lapply(names(df), function(x) {
-  fits <- list()
-  cat(x, "multiplicative\n")
-  fits[["multiplicative"]] <-
-    mclapply(models, variant_model, data = df[[x]], mc.cores = mc_cores)
-  cat(x, "additive\n")
-  fits[["additive"]] <-
-    mclapply(models, variant_model, data = df[[x]], mc.cores = mc_cores,
-           additive = TRUE)
-  return(fits)
-})
-names(results) <- names(df)
+# fit model grid in parallel
+fit_targets <- expand_grid(loc = c("utla", "region"), 
+                           effect_type = c("mutliplicative", "additive"), 
+                           target = c("cfr", "chr", "hfr"))
+
+
+fits <- future_lapply(1:nrow(fit_targets), function(i) {
+  ft <- fit_targets[i, ]
+  ft$data <- df[[ft$loc]][[ft$target]]
+  message("Fitting ", ft$target, " at the ", ft$loc, " level")
+  out <- list()
+  fits <- supressMessages(lapply(models, variant_model,
+                                 data = ft$data,
+                                 additive = ft$effect_type %in% "additive"))
+  ft$models <- list(names(models))
+  ft$fit <- list(fits)
+  ft <- unnest(ft, cols = c("models", "fit"))
+  return(ft)},
+  future.scheduling = Inf, future.seed = TRUE)
+
+fits <- reduce(fits, bind_rows)
 
 ## variant effect ----------------------------------------------------------
-extract_variant_effect <- function(x, additive = FALSE) {
-  samples <- posterior_samples(x, "alpha")
-  q <- samples[, "alpha"]
-  q <- quantile(q, c(0.025, 0.5, 0.975))
-  q <- signif(q, 2)
-  return(q)
-}
+fits <- fits %>% 
+  mutate(variant_effect_q = map(fit, function(x) {
+    samples <- posterior_samples(x, "alpha")
+    q <- samples[, "alpha"]
+    q <- quantile(q, c(0.025, 0.5, 0.975))
+    q <- signif(q, 2)
+    return(q)
+  })) %>% 
+  mutate(variant_effect =  map_chr(variant_effect_q,
+                                   ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
 
-var_res <- lapply(names(results), function(x) {
-  variant_effect <- list()
-  variant_effect[["multiplicative"]] <-
-    lapply(results[[x]][["multiplicative"]], extract_variant_effect)
-  variant_effect[["additive"]] <-
-    lapply(results[[x]][["additive"]], extract_variant_effect, additive = TRUE)
-  return(variant_effect)
-})
-names(var_res) <- names(df)
 
 ## Compare models ----------------------------------------------------------
 ## requires custom log_lik functions to be implemented for variant_nb family
 expose_functions(results[[1]][[1]][[1]], vectorize = TRUE)
 
-add_loo <- function(fits) {
-  fits %>%
-    lapply(add_criterion, "loo") %>%
-    lapply(loo, save_psis = TRUE)
-}
-
-options(mc.cores = no_cores)
-model_loos <- lapply(names(results), function(x) {
-  fits <- results[[x]]
-  loos <- list()
-  loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
-  loos[["additive"]] <- add_loo(fits[["additive"]])
-  lc <- list()
-  lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
-  lc[["additive"]] <- loo_compare(loos[["additive"]])
-  all_loos <- flatten(loos)
-  names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"),
-                       paste0(names(all_loos)[1:length(models)], "_additive"))
-  lc[["all"]] <- loo_compare(all_loos)
-  return(list(loos = loos, lc = lc))
-})
-names(model_loos) <- names(df)
+fits <- fits %>% 
+  mutate(loos = map(fit, loo, save_psis = TRUE))
 
 # Save results ------------------------------------------------------------
 to_save <- lapply(names(df), function(x) {

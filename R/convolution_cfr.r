@@ -100,4 +100,4 @@ fits <- fits %>%
                                    ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
 
 # Save output -------------------------------------------------------------
-saveRDS(fits, here("output", "convolution-associations.rds"))
+saveRDS(fits, here("output", "convolution_associations.rds"))
