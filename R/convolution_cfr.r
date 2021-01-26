@@ -34,8 +34,8 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 # Define model ------------------------------------------------------------
 models <- list()
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
-models[["normalised_primary"]] <- as.formula(secondary ~ s(normalised_primary, k = 5) + prop_sgtf)
-models[["utla"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
+models[["primary"]] <- as.formula(secondary ~ s(normalised_primary, k = 5) + prop_sgtf)
+models[["loc"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
 models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(normalised_primary, k = 5) + prop_sgtf)
 
 # Fit models --------------------------------------------------------------
@@ -62,12 +62,13 @@ priors[["chr"]] <- c(prior("normal(-2.5, 0.5)", class = "Intercept"))
 priors[["hfr"]] <- c(prior("normal(-1, 0.5)", class = "Intercept"))
 
 # fit model grid in parallel
-fit_targets <- expand_grid(loc = c("region", "utla"), 
+fit_targets <- expand_grid(loc = c("utla", "region"), 
                            conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
 
+# restrict grid to those with a fixed convolution distribution
 fit_targets <- fit_targets %>% 
-  filter(conv %in% "fixed")
+  filter(!(conv %in% "loc" & loc %in% "utla"))
 
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]

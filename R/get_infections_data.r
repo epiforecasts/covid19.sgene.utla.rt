@@ -6,11 +6,13 @@
 ##' @param to "cases", "admissions" or "deaths"
 ##' @param type "deconvoluted" (via the EpiNow2 model) or "lagged" (fixed lag,
 ##' estimated from data via correlation analysis)
+##' @param level Aggregation level of the data
 ##' @return a data frame of the two indicators matched to the same time
 ##' @author Sebastian Funk
 get_infections_data <- function(from = c("cases", "admissions", "deaths"),
                      to = c("cases", "admissions", "deaths"),
                      type = c("backcalculated", "lagged"),
+                     level = c("utla", "nhs region"),
                      infections_lag = 7) {
   
   ## Arguments ---------------------------------------------------------------
@@ -122,7 +124,26 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   
   ## rename everything to cases/deaths to make things easier later
   deaths_with_cov <- deaths_with_cov %>%
-    rename(!!!c(cases = from, deaths = to))
+    rename(!!!c(cases = from, deaths = to)) %>% 
+    rename(loc = utla)
+  
+  if (level %in% "nhs region") {
+    deaths_with_cov <- deaths_with_cov %>% 
+      mutate(positive = samples * prop_sgtf) %>% 
+      group_by(week_infection, region) %>% 
+      summarise(
+        cases = sum(cases),
+        deaths = sum(deaths), 
+        prop_sgtf = sum(positive) / sum(samples),
+        samples = sum(samples),
+        .groups = "drop"
+      ) %>% 
+      select(loc = region, week_infection, cases, deaths, prop_sgtf, samples)
+  }
+  
+  # add normalised cases as a predictor
+  deaths_with_cov <- deaths_with_cov %>% 
+    mutate(normalised_cases = (cases - mean(cases)) / sd(cases))
   
   return(deaths_with_cov)
 }

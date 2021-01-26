@@ -18,19 +18,29 @@ source(here("R", "get_infections_data.r"))
 
 # Get data ----------------------------------------------------------------
 df <- list()
-df[["cfr"]] <- get_infections_data("cases", "deaths", "lagged")
-df[["chr"]] <- get_infections_data("cases", "admissions", "lagged")
-admissions_lag <- unique(df[["chr"]]$lag)
-df[["hfr"]] <- get_infections_data("admissions", "deaths", "lagged",
-                        infections_lag = 7 + admissions_lag)
 
-## Fit models --------------------------------------------------------------
+# all data combinations by UTLA
+df[["utla"]][["cfr"]] <- get_infections_data("cases", "deaths")
+df[["utla"]][["chr"]] <- get_infections_data("cases", "admissions")
+df[["utla"]][["hfr"]] <- get_infections_data("admissions", "deaths",
+                                             infections_lag = 7 + df[["utla"]][["chr"]]$lag)
+
+# all data combinations by NHS region
+df[["region"]][["cfr"]] <- get_infections_data("cases", "deaths", level = "nhs region")
+df[["region"]][["chr"]] <- get_infections_data("cases", "admissions", level = "nhs region")
+df[["region"]][["hfr"]] <- get_infections_data("admissions", "deaths", level = "nhs region",
+                                               infections_lag = 7 + df[["region"]][["chr"]]$lag)
+
+# Define models -----------------------------------------------------------
 models <- list()
 ## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
-models[["time"]] <- as.formula(deaths ~ (1 | time))
-models[["utla"]] <- as.formula(deaths ~ (1 | utla))
-models[["all"]] <- as.formula(deaths ~ (1 | utla) + (1 | time))
+models[["primary"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
+models[["utla"]] <- as.formula(deaths ~ (1 | loc))
+models[["all"]] <- as.formula(deaths ~ (1 | loc) + s(normalised_cases, k = 5))
+
+
+## Fit models --------------------------------------------------------------
 
 ## core usage
 if (no_cores <= 4) {
