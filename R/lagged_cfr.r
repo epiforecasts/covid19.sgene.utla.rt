@@ -93,4 +93,4 @@ fits <- fits %>%
   mutate(loo = map(fit, loo, save_psis = TRUE))
 
 # Save results ------------------------------------------------------------
-saveRDS(fits, here("output", "associations.rds"))
+saveRDS(fits, here("output", "lagged_associations.rds"))
