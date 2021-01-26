@@ -73,10 +73,10 @@ fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
   message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
   out <- list()
-  fits <- lapply(models, fit_brm_convolution,
+  fits <- supressMessages(lapply(models, fit_brm_convolution,
                 data = df[[ft$loc]][[ft$target]],
                 prior = priors[[ft$target]],
-                conv_varying = ft$conv)
+                conv_varying = ft$conv))
   ft$models <- list(names(models))
   ft$fit <- list(fits)
   ft <- unnest(ft, cols = c("models", "fit"))
