@@ -14,7 +14,28 @@ variant_nb <- function(additive = FALSE) {
     links = c("logit", "log", "identity", "log"),
     lb = c(0, 0, ifelse(!additive, 0, NA), 0),
     type = "int",
-    vars = c("f[n]", "cases[n]", "effect[1]")
+    vars = c("f[n]", "cases[n]", "effect[1]"), 
+    log_lik = function(i, prep) {
+      mu <- prep$dpars$mu[, i]
+      phi <- prep$dpars$phi
+      alpha <- prep$dpars$alpha
+      epsilon <- prep$dpars$epsilon
+      f <- prep$data$f[i]
+      y <- prep$data$Y[i]
+      cases <- prep$data$cases[i]
+      effect <- prep$data$effect[1]
+      variant_nb_lpmf(y, mu, phi, alpha, epsilon, f, cases, effect)
+    },
+    posterior_predict = function(i, prep, ...) {
+      mu <- prep$dpars$mu[, i]
+      phi <- prep$dpars$phi
+      alpha <- prep$dpars$alpha
+      f <- prep$data$f[i]
+      y <- prep$data$Y[i]
+      cases <- prep$data$cases[i]
+      effect <- prep$data$effect[1]
+      variant_nb_rng(mu, phi, alpha, epsilon, f, cases, effect)
+    }
   )
 }
 
@@ -75,28 +96,4 @@ variant_model <- function(form, iter = 2000, data, additive = FALSE, ...) {
       stanvars = make_stanvars(data, additive = additive),
       control = list(adapt_delta = 0.99),
       warmup = 1000, iter = iter, ...)
-}
-
-
-log_lik_variant_nb <- function(i, prep) {
-  mu <- prep$dpars$mu[, i]
-  phi <- prep$dpars$phi
-  alpha <- prep$dpars$alpha
-  epsilon <- prep$dpars$epsilon
-  f <- prep$data$f[i]
-  y <- prep$data$Y[i]
-  cases <- prep$data$cases[i]
-  effect <- prep$data$effect[1]
-  variant_nb_lpmf(y, mu, phi, alpha, epsilon, f, cases, effect)
-}
-
-posterior_predict_variant_nb <- function(i, prep, ...) {
-  mu <- prep$dpars$mu[, i]
-  phi <- prep$dpars$phi
-  alpha <- prep$dpars$alpha
-  f <- prep$data$f[i]
-  y <- prep$data$Y[i]
-  cases <- prep$data$cases[i]
-  effect <- prep$data$effect[1]
-  variant_nb_rng(mu, phi, alpha, epsilon, f, cases, effect)
 }

@@ -34,9 +34,9 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 # Define model ------------------------------------------------------------
 models <- list()
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
-models[["time"]] <- as.formula(secondary ~ s(time, k = 5) + prop_sgtf)
+models[["normalised_primary"]] <- as.formula(secondary ~ s(normalised_primary, k = 5) + prop_sgtf)
 models[["utla"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
-models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(time, k = 5) + prop_sgtf)
+models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(normalised_primary, k = 5) + prop_sgtf)
 
 # Fit models --------------------------------------------------------------
 # set up parallel
@@ -53,9 +53,8 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
   brm_convolution(formula, control = list(adapt_delta = 0.95, max_treedepth = 12),
-                  iter = 4000, cores = stan_cores, ...)
+                  iter = 3000, cores = stan_cores, ...)
 }
-
 # set context specific priors (based on mean in data)
 priors <- list()
 priors[["cfr"]] <- c(prior("normal(-4, 0.5)", class = "Intercept"))
@@ -74,10 +73,10 @@ fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
   message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
   out <- list()
-  fits <- suppressMessages(lapply(models, fit_brm_convolution,
+  fits <- lapply(models, fit_brm_convolution,
                 data = df[[ft$loc]][[ft$target]],
                 prior = priors[[ft$target]],
-                conv_varying = ft$conv))
+                conv_varying = ft$conv)
   ft$models <- list(names(models))
   ft$fit <- list(fits)
   ft <- unnest(ft, cols = c("models", "fit"))
@@ -101,4 +100,3 @@ fits <- fits %>%
 
 # Save output -------------------------------------------------------------
 saveRDS(fits, here("output", "convolution-associations.rds"))
-
