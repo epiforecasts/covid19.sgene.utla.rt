@@ -22,9 +22,9 @@ source(here("R", "get_notifications_data.r"))
 df <- list()
 
 # all data combinations by UTLA
-df[["utla"]][["cfr"]] <- get_notifications_data("cases", "deaths")
-df[["utla"]][["chr"]] <- get_notifications_data("cases", "admissions")
-df[["utla"]][["hfr"]] <- get_notifications_data("admissions", "deaths")
+df[["utla"]][["cfr"]] <- get_notifications_data("cases", "deaths", level = "utla")
+df[["utla"]][["chr"]] <- get_notifications_data("cases", "admissions", level = "utla")
+df[["utla"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level = "utla")
 
 # all data combinations by NHS region
 df[["region"]][["cfr"]] <- get_notifications_data("cases", "deaths", level = "nhs region")
@@ -74,7 +74,7 @@ fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
   message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
   out <- list()
-  fits <- supressMessages(lapply(models, fit_brm_convolution,
+  fits <- suppressMessages(lapply(models, fit_brm_convolution,
                 data = df[[ft$loc]][[ft$target]],
                 prior = priors[[ft$target]],
                 conv_varying = ft$conv))

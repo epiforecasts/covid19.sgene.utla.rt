@@ -4,21 +4,21 @@
 ##' given by \code{infections_lag}
 ##' @param from "cases", "admissions" or "deaths"
 ##' @param to "cases", "admissions" or "deaths"
-##' @param type "deconvoluted" (via the EpiNow2 model) or "lagged" (fixed lag,
-##' estimated from data via correlation analysis)
+##' @param type "backcalculated" (via the EpiNow2 model) or "lagged" (fixed lag,
+##' estimated from data via correlation analysis).
 ##' @param level Aggregation level of the data
 ##' @return a data frame of the two indicators matched to the same time
 ##' @author Sebastian Funk
 get_infections_data <- function(from = c("cases", "admissions", "deaths"),
                      to = c("cases", "admissions", "deaths"),
-                     type = c("backcalculated", "lagged"),
+                     type = c("lagged", "backcalculated"),
                      level = c("utla", "nhs region"),
                      infections_lag = 7) {
   
   ## Arguments ---------------------------------------------------------------
   from <- match.arg(from, choices = c("cases", "admissions", "deaths"))
   to <- match.arg(to, choices = c("cases", "admissions", "deaths"))
-  type <- match.arg(type, choices = c("backcalculated", "lagged"))
+  type <- match.arg(type, choices = c("lagged", "backcalculated"))
   
   ## Data --------------------------------------------------------------------
   base_url <-
@@ -117,11 +117,6 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   deaths_with_cov <- deaths_with_cov %>%
     mutate(time = factor((week_infection - min(week_infection)) / 7))
   
-  if (!is.null(set_lag)) {
-    deaths_with_cov <- deaths_with_cov %>%
-      mutate(lag = set_lag)
-  }
-  
   ## rename everything to cases/deaths to make things easier later
   deaths_with_cov <- deaths_with_cov %>%
     rename(!!!c(cases = from, deaths = to)) %>% 
@@ -145,5 +140,9 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   deaths_with_cov <- deaths_with_cov %>% 
     mutate(normalised_cases = (cases - mean(cases)) / sd(cases))
   
+  if (!is.null(set_lag)) {
+    deaths_with_cov <- deaths_with_cov %>%
+      mutate(lag = set_lag)
+  }
   return(deaths_with_cov)
 }
