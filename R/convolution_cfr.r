@@ -33,11 +33,10 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 
 # Define model ------------------------------------------------------------
 models <- list()
-
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
-models[["time"]] <- as.formula(secondary ~ (1 | time) + prop_sgtf)
+models[["time"]] <- as.formula(secondary ~ s(time, k = 5) + prop_sgtf)
 models[["utla"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
-models[["all"]] <- as.formula(secondary ~ (1 | loc) + (1 | time) + prop_sgtf)
+models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(time, k = 5) + prop_sgtf)
 
 # Fit models --------------------------------------------------------------
 # set up parallel
@@ -53,7 +52,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
-  brm_convolution(formula, control = list(adapt_delta = 0.99, max_treedepth = 12),
+  brm_convolution(formula, control = list(adapt_delta = 0.95, max_treedepth = 12),
                   iter = 4000, cores = stan_cores, ...)
 }
 
@@ -64,8 +63,12 @@ priors[["chr"]] <- c(prior("normal(-2.5, 0.5)", class = "Intercept"))
 priors[["hfr"]] <- c(prior("normal(-1, 0.5)", class = "Intercept"))
 
 # fit model grid in parallel
-fit_targets <- expand_grid(loc = c("region", "utla"), conv = c("fixed", "loc"), 
+fit_targets <- expand_grid(loc = c("region", "utla"), 
+                           conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
+
+fit_targets <- fit_targets %>% 
+  filter(conv %in% "fixed")
 
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
@@ -96,5 +99,6 @@ fits <- fits %>%
   mutate(variant_effect =  map_chr(variant_effect_q,
                                    ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
 
+# Save output -------------------------------------------------------------
 saveRDS(fits, here("output", "convolution-associations.rds"))
 
