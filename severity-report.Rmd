@@ -26,6 +26,7 @@ library(gt)
 library(stringr)
 library(purrr)
 library(scales)
+library(lemon)
 
 knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 ```
@@ -39,7 +40,7 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 ## Abstract
 
-**Background:** Individual level data indicates S-gene target failure may be associated with increased case fatality rates, increased hospitalisation rates, and increased hospitalisation fatality rates. Whilst an individual level data approach represents the gold standard for observational analysis population level analysis may be helpful to triangulate findings, especially when individual data sources are confidential or only partially representative. In this analysis, we use multiple approaches to evaluate public population level data for evidence of an association between S-gene target failure and severity measures.
+**Background:** Individual level data indicates S-gene target failure may be associated with increased case fatality rates, increased hospitalisation rates, and increased hospitalisation fatality rates. Whilst an individual level data approach represents the gold standard for observational analysis population level analysis may be helpful to triangulate findings, especially when individual data sources are confidential, or only partially representative. In this analysis, we use multiple approaches to evaluate public population level data for evidence of an association between S-gene target failure and severity measures.
 
 **Method:** We explored the association between the proportion of samples that were S-gene negative and the case fatality rate, hospitalisation rate, and hospitalisation fatality rate of Covid-19 aggregated at the UTLA and NHS region level. Two approaches were used with the first assuming a fixed lag between primary and secondary observations with the lag optimised using the Pearson's correlation coefficient. The second approach assumed that the secondary observations could be estimated using a convolution of primary observations multiplied by some scaling factor. For the fixed lag analysis we investigated both additive and negative effects of being S-gene negative and for the convolution approach we explored delays between observations that varied spatially. We present both univariate and multivariate estimates with the latter adjusted for spatial and temporal variation. 
 
@@ -84,9 +85,9 @@ where $\alpha$ represents either the multiplicative change in case fatality rate
 We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) by date of report were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of report, convolved by a log normal delay, and scaled by a rate (which when using cases and deaths is the case fatality rate),
 
 
-$$D_{i,t} \sim \mathrm{NB}\left(c_i\sum_\tau \xi_{i, \tau} C_{i, t-\tau},  \phi \right)$$
+$$D_{i,t} \sim \mathrm{NB}\left(c_i\sum_{\tau = 0}^{30} \xi_{i, \tau} C_{i, t-\tau},  \phi \right)$$
 
-where $i$ indicates UTLA or NHS region, $t$ day of report, $\xi_{i, \tau}$ is the probability mass function of a log normal distribution and may be either be static across all locations or vary by location. $c_i$ is the location specific case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively). $c_i$ is then estimated using,
+where $i$ indicates UTLA or NHS region, $t$ day of report, $\xi_{i, \tau}$ is the probability mass function of a log normal distribution and may be either be static across all locations or vary by location, and $\tau$ indexes days prior to $t$. $c_i$ is the location specific case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively). $c_i$ is then estimated using,
 
 $$c_i = \mathrm{logit}^{-1}\left(\alpha f_{it} + \gamma_{i,t}\right)$$
 where, as for the fixed lag analysis, $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with time modelled using a thin plate spline. 
@@ -144,20 +145,19 @@ present_table(multivariate_effects, cap = "Estimated adjusted effect of S-gene n
 
 We studied the relationship between SGTF (as a proxy for the new variant of concern) and the association between Covid-19 cases, hospitalisations and deaths adjusted using multiple approaches.
 
-* TODO: Summarise convolution findings (univariate and multivariate, by UTLA and NHS region).
-* TODO: Summarise lag findings (univariate and multivariate, by UTLA and NHS region).
-* TODO: Summarise differences across approaches (spatial scale, and model).
+TODO: Summarise convolution findings (univariate and multivariate, by UTLA and NHS region).
+TODO: Summarise lag findings (univariate and multivariate, by UTLA and NHS region).
+TODO: Summarise differences across approaches (spatial scale, and model).
 
 Our estimates for the association between SGTF and the case fatality rate were comparable to those from individual based approaches but...
 
-* TODO: Compare to Nicks's + exeters + imperials case control and survival analysis of case fatality rate.
-* TODO: Compare to other studies looking at hospitalisation rate + hospitalisation fataility rate.
+TODO: Compare to lshtm + exeters + imperials case control and survival analysis of case fatality rate.
+TODO: Compare to other studies looking at hospitalisation rate + hospitalisation fataility rate.
 
-Our results are indicative only as they make use of aggregated data that is subject to a large range of confounders. However, they may act as useful support for other, individual level approaches, and potentially may be generalised to scenarios where individual level data is not available.
+Our results are indicative only as they make use of aggregated data that is subject to a large range of confounders. However, they may act as useful support for other, individual level approaches, and potentially may be generalised to scenarios where individual level data is not available. Whilst we adjusted for location and temporal variation we could not adjust for multiple confounders such as the age of cases/admission due to the lack of public data on the age of Covid-19 cases/admissions by NHS region or UTLA. Our inclusion of temporal variation as a confounder may also compete with the effect of S-gene target failure causing bias in our multivariate estimates. Lastly, we fitted the model only  point estimates of the proportion of SGTF observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Finally, SGTF uniquely identify the novel variant and therefore our analysis may be biased by the inclusion of other variants. Our results should be used to triangulate the effect of novel variant rather than as standalone evidence. 
 
-Our results should be treated with caution as several caveats apply: we have not observed any local authorities in which all tests were S-gene negative and therefore are extrapolating beyond the available data. We assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of SGTF observed in every UTLA per week. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Lastly, SGTF does sometimes occur with other variants and we therefore cannot rule out that our effect includes a component not related to the new variant. Further investigation will be necessary in order to establish the relationship between SGTF and the reproduction number.
-
-We found consistent evidence that SGTF was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that NPI measures implemented since September in England may not be sufficient to reduce the reproduction number below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
+TODO: Improve limitations.
+TODO: Conclusions. What does it mean. Why is this a good way of doing it. What can we do next. Method generalisability. Wrap up. 
 
 # References
 

@@ -4,6 +4,7 @@ library(tidyr)
 library(ggplot2)
 library(scales)
 library(cowplot)
+library(lemon)
 
 plot_severity <- function(df, geography = "utla", alpha = 0.2) {
   
