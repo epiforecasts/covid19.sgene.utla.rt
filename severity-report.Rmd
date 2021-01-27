@@ -120,7 +120,7 @@ present_table <- function(tbl, cap) {
   landscape()
 }
 
-univariate_effects <- make_effects_table(effects, "intercept")
+univariate_effects <- make_effects_table(effects, "loc")
 multivariate_effects <- make_effects_table(effects, "all")
 ```
 

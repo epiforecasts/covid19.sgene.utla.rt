@@ -34,9 +34,9 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 # Define model ------------------------------------------------------------
 models <- list()
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
-models[["time"]] <- as.formula(secondary ~ s(time, k = 5) + prop_sgtf)
+models[["primary"]] <- as.formula(secondary ~ s(normalised_primary, k = 5) + prop_sgtf)
 models[["loc"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
-models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(time, k = 5) + prop_sgtf)
+models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(normalised_primary, k = 5) + prop_sgtf)
 
 # Fit models --------------------------------------------------------------
 # set up parallel
@@ -52,7 +52,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
-  brm_convolution(formula, control = list(adapt_delta = 0.98, max_treedepth = 12),
+  brm_convolution(formula, control = list(adapt_delta = 0.99, max_treedepth = 12),
                   iter = 3000, cores = stan_cores, ...)
 }
 # set context specific priors (based on mean in data)
