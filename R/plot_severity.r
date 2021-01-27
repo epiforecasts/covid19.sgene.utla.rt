@@ -6,7 +6,7 @@ library(scales)
 library(cowplot)
 library(lemon)
 
-plot_severity <- function(df, geography = "utla", alpha = 0.2) {
+plot_severity <- function(df, alpha = 0.4) {
   
   df <- df %>% 
     mutate(data = map2(data, loc, function(df, loc) {

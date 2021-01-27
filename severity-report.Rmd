@@ -130,7 +130,7 @@ TODO: Discuss multivariate findings starting with UTLA and summarise difference 
 
 ```{r scatter, echo=FALSE, fig.width=10, fig.height=10, fig.cap = "Proportion with S gene dropped compared to the adjusted severity rates each week beginning Monday the 5th of October by NHS region and upper-tier local authority (UTLA). Each point represents one NHS region or UTLA and one week, with the size of the point given by the number of PCR tests."}
 source(here("R", "plot_severity.r"))
-suppressMessages(plot_severity(lagged_severity_data, geography = "region", alpha = 0.4))
+suppressMessages(plot_severity(lagged_severity_data, alpha = 0.4))
 ```
 
 ```{r univariate-effects, results = "asis"} 
