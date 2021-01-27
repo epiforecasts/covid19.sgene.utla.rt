@@ -36,9 +36,9 @@ df[["region"]][["hfr"]] <- get_infections_data("admissions", "deaths", "lagged",
 models <- list()
 ## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
-models[["primary"]] <- as.formula(deaths ~ s(normalised_cases, k = 5))
+models[["time"]] <- as.formula(deaths ~ s(time, k = 5))
 models[["loc"]] <- as.formula(deaths ~ (1 | loc))
-models[["all"]] <- as.formula(deaths ~ (1 | loc) + s(normalised_cases, k = 5))
+models[["all"]] <- as.formula(deaths ~ (1 | loc) + s(time, k = 5))
 
 ## Fit models --------------------------------------------------------------
 ## core usage

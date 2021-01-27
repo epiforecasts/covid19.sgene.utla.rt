@@ -34,9 +34,9 @@ df[["region"]][["hfr"]] <- get_notifications_data("admissions", "deaths", level 
 # Define model ------------------------------------------------------------
 models <- list()
 models[["intercept"]] <- as.formula(secondary ~ 1 + prop_sgtf)
-models[["primary"]] <- as.formula(secondary ~ s(normalised_primary, k = 5) + prop_sgtf)
+models[["time"]] <- as.formula(secondary ~ s(time, k = 5) + prop_sgtf)
 models[["loc"]] <- as.formula(secondary ~ (1 | loc) + prop_sgtf)
-models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(normalised_primary, k = 5) + prop_sgtf)
+models[["all"]] <- as.formula(secondary ~ (1 | loc) + s(time, k = 5) + prop_sgtf)
 
 # Fit models --------------------------------------------------------------
 # set up parallel

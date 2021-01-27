@@ -125,7 +125,7 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   if (level %in% "nhs region") {
     deaths_with_cov <- deaths_with_cov %>% 
       mutate(positive = samples * prop_sgtf) %>% 
-      group_by(week_infection, region) %>% 
+      group_by(week_infection, region, time) %>% 
       summarise(
         cases = sum(cases),
         deaths = sum(deaths), 
@@ -133,12 +133,15 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
         samples = sum(samples),
         .groups = "drop"
       ) %>% 
-      select(loc = region, week_infection, cases, deaths, prop_sgtf, samples)
+      select(loc = region, week_infection, time, cases, deaths, prop_sgtf, samples)
   }
   
   # add normalised cases as a predictor
   deaths_with_cov <- deaths_with_cov %>% 
-    mutate(normalised_cases = (cases - mean(cases)) / sd(cases))
+    mutate(normalised_cases = (cases - mean(cases)) / sd(cases),
+           time = as.numeric(time),
+           time = time - min(time),
+           time = (time - mean(time)) / sd(time))
   
   if (!is.null(set_lag)) {
     deaths_with_cov <- deaths_with_cov %>%
