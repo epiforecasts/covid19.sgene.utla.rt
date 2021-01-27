@@ -174,7 +174,7 @@ real variant_nb_lpmf(int y, real mu, real phi, real alpha, real epsilon,
     }
     return  neg_binomial_2_lpmf(y | scaled_cases, phi);
                             }
-real variant_nb_rng(int y, real mu, real phi, real alpha, real epsilon,
+real variant_nb_rng(real mu, real phi, real alpha, real epsilon,
                     real f, int cases, int effect) {
     real scaled_cases;
     if (effect) {
@@ -232,9 +232,9 @@ df[["hfr"]] <- get_data("admissions", "deaths", "lagged",
 models <- list()
 ## define models to fit
 models[["intercept"]] <- as.formula(deaths ~ 1)
-models[["time"]] <- as.formula(deaths ~ (1 | time))
-models[["utla"]] <- as.formula(deaths ~ (1 | utla))
-models[["all"]] <- as.formula(deaths ~ (1 | utla) + (1 | time))
+models[["time"]] <- as.formula(deaths ~ 1 + (1 | time))
+models[["utla"]] <- as.formula(deaths ~ 1 + (1 | utla))
+models[["all"]] <- as.formula(deaths ~ 1 + (1 | utla) + (1 | time))
 
 ## core usage
 if (no_cores <= 4) {
@@ -252,14 +252,10 @@ results <- lapply(names(df), function(x) {
   cat(x, "multiplicative\n")
   fits[["multiplicative"]] <-
     lapply(models, nb_model, data = df[[x]])
-  cat(x, "additive\n")
-  fits[["additive"]] <-
-    lapply(models, nb_model, data = df[[x]],
-           additive = TRUE)
-  return(fits)
 })
 
 names(results) <- names(df)
+saveRDS(results, here::here("output", "cfr_fits.rds"))
 
 ## variant effect ----------------------------------------------------------
 extract_variant_effect <- function(x, additive = FALSE) {
@@ -282,7 +278,7 @@ names(var_res) <- names(df)
 
 ## Compare models ----------------------------------------------------------
 ## requires custom log_lik functions to be implemented for variant_nb family
-expose_functions(results[[1]][[1]][[1]], vectorize = TRUE)
+expose_functions(results[[1]][[1]], vectorize = TRUE)
 
 log_lik_variant_nb <- function(i, prep) {
   mu <- prep$dpars$mu[, i]
@@ -300,6 +296,7 @@ posterior_predict_variant_nb <- function(i, prep, ...) {
   mu <- prep$dpars$mu[, i]
   phi <- prep$dpars$phi
   alpha <- prep$dpars$alpha
+  epsilon <- prep$dpars$epsilon
   f <- prep$data$f[i]
   y <- prep$data$Y[i]
   cases <- prep$data$cases[i]
@@ -314,18 +311,20 @@ add_loo <- function(fits) {
 }
 
 options(mc.cores = no_cores)
+
+yrep <- lapply(names(results), function(x)  lapply(results[[x]], posterior_predict))
+names(yrep) <- names(df)
+
+psis <- lapply(names(results), function(x) {
+  fits <- results[[x]]
+  lapply(fits, function(x) psis(-log_lik(x))
+})
+names(psis) <- names(df)
+
 model_loos <- lapply(names(results), function(x) {
   fits <- results[[x]]
-  loos <- list()
-  loos[["multiplicative"]] <- add_loo(fits[["multiplicative"]])
-  loos[["additive"]] <- add_loo(fits[["additive"]])
-  lc <- list()
-  lc[["multiplicative"]] <- loo_compare(loos[["multiplicative"]])
-  lc[["additive"]] <- loo_compare(loos[["additive"]])
-  all_loos <- flatten(loos)
-  names(all_loos) <- c(paste0(names(all_loos)[1:length(models)], "_multiplictive"),
-                       paste0(names(all_loos)[1:length(models)], "_additive"))
-  lc[["all"]] <- loo_compare(all_loos)
+  loos <- add_loo(fits)
+  lc <- loo_compare(loos)
   return(list(loos = loos, lc = lc))
 })
 names(model_loos) <- names(df)
@@ -337,6 +336,7 @@ to_save <- lapply(names(df), function(x) {
   output$fits <- results[[x]]
   output$effect <- var_res[[x]]
   output$loos <- model_loos[[x]]
+  output$yrep <- yrep[[x]]
   return(output)
 })
 names(to_save) <- names(df)
