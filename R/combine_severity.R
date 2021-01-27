@@ -28,7 +28,7 @@ saveRDS(lagged_score, here("data", "severity_models_scored.rds"))
 # Join results ------------------------------------------------------------
 severity <- convolution_severity %>% 
   bind_rows(lagged_severity) %>% 
-  select(-models, -conv, -variant_effect_q) %>% 
+  select(-conv, -variant_effect_q) %>% 
   select(target, loc, convolution, effect_type, effect = variant_effect, 
          everything()) %>% 
   mutate(convolution = factor(convolution,

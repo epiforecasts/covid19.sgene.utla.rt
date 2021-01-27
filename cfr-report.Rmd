@@ -27,7 +27,7 @@ library(stringr)
 library(purrr)
 library(scales)
 
-assoc <- readRDS(here("output", "associations.rds"))
+lagged_severity_data <- readRDS(here("data", "lagged_severity_data.rds"))
 ```
 
 For correspondence: sebastian.funk@lshtm.ac.uk
@@ -68,186 +68,66 @@ All models were implemented using the `brms` [@brms] package in `R`. All code re
 
 # Results
 
-## Cases and deaths
 
-```{r cfr,echo = FALSE}
-cfr <- assoc$cfr
-```
-
-```{r cfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
-prop_data <- cfr$data %>%
-  mutate(cfr = deaths / cases)
-
-suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
-                      fill = region, size = deaths)) +
-  geom_jitter(pch = 21) +
-  facet_wrap(. ~ week_infection) +
+```{r region, echo=FALSE, fig.width=10, fig.height=10}
+plot_severity <- function(df, geography = "utla", alpha = 0.2) {
+  prop_data <- df %>% 
+  filter(loc %in% geography) %>%
+  mutate(data = map2(data, target, ~ mutate(.x, rate = deaths / cases, type = .y))) %>% 
+  pull(data) %>% 
+  bind_rows() %>% 
+  mutate(type = case_when(type %in% "cfr" ~ "Case fatality rate",
+                          type %in% "chr" ~ "Case hospitalisation rate",
+                          type %in% "hfr" ~ "Hospitalisation fatality rate"))
+  
+  if (geography %in% "region") {
+    prop_data <- prop_data %>% 
+      mutate(region = loc)
+  }
+  
+  suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = rate,
+                      fill = region, size = samples)) +
+  geom_jitter(pch = 21, alpha = alpha) +
   scale_fill_brewer("", palette = "Set1") +
   scale_y_continuous(labels = percent) +
   xlab("Proportion with S gene dropped") +
-  ylab("Case fatality rate") +
+  ylab("Rate") +
+  facet_wrap(~ type, scales = "free_y", nrow = 2) +
   theme_cowplot() +
-  labs(size = paste("Deaths")) +
+  labs(size = paste("Samples")) +
   theme(legend.position = "bottom",
         legend.direction = "horizontal",
         legend.box = "vertical"))
+}
+  
+plot_severity(lagged_severity_data, geography = "region", alpha = 0.4)
 ```
 
-*Figure 1: Proportion with S gene dropped compared to the adjusted case-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
+*Figure 1: Proportion with S gene dropped compared to the adjusted severity rates each week beginning Monday the 5th of October. Each point represents one NHS region and one week, with the size given by the number of PCR tests.*
 
-```{r cfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
-to_per <- function(var) {
-  paste0(var)
-}
-effects <- lc %>%
-  select(-`ELPD difference`) %>%
-  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
-         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
-  select(-model, -type) %>%
-  pivot_wider(names_from = Type, values_from = effect) %>%
-  rename(Model = pretty_model)
 
-effects %>%
+```{r utla, echo=FALSE, fig.width=10, fig.height=10}
+plot_severity(lagged_severity_data, geography = "utla", alpha = 0.2)
+```
+
+*Figure 2: Proportion with S gene dropped compared to the adjusted severity rates each week beginning Monday the 5th of October. Each point represents one UTLA and one week, with the size given by the number of PCR tests.*
+
+
+
+
+```{r effects-univariate, echo = FALSE, results = 'asis'}
+effects <- readRDS(here("data", "severity_sgtf_effect.rds"))
+
+make_effects_table <- function(effects, model) {
+  effects %>%
+  filter(models %in% "intercept") %>% 
   kbl() %>%
   kable_styling()
+}
+
 ```
 *Table 2: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case-fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case-fatality rate.*
 
-## Cases and hospitalisations
-
-```{r chr,echo = FALSE}
-cfr <- assoc$chr
-```
-
-```{r chr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
-prop_data <- cfr$data %>%
-  mutate(cfr = deaths / cases)
-
-suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
-                      fill = region, size = deaths)) +
-  geom_jitter(pch = 21) +
-  facet_wrap(. ~ week_infection) +
-  scale_fill_brewer("", palette = "Set1") +
-  scale_y_continuous(labels = percent) +
-  xlab("Proportion with S gene dropped") +
-  ylab("Case hospitalisation rate") +
-  theme_cowplot() +
-  labs(size = paste("Hospitalisations")) +
-  theme(legend.position = "bottom",
-        legend.direction = "horizontal",
-        legend.box = "vertical"))
-```
-*Figure 2: Proportion with S gene dropped compared to the adjusted case-hospitalisation rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of hospitalisations by date of infection.*
-
-```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
-  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
-         model = str_replace_all(model, "_additive", "") %>%
-           str_replace_all("_multiplictive", "")) %>%
-  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
-           str_to_sentence(),
-         Type = type %>%
-           str_to_sentence()) %>%
-  mutate(pretty_model = case_when(
-    pretty_model == "Utla" ~ "UTLA",
-    TRUE ~ pretty_model
-  )) %>%
-  select(Type, type, pretty_model, model, `ELPD difference`)
-
-lc %>%
-  select(Type, Model = pretty_model, `ELPD difference`) %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 3: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
-
-
-```{r chr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
-to_per <- function(var) {
-  paste0(var)
-}
-effects <- lc %>%
-  select(-`ELPD difference`) %>%
-  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
-         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
-  select(-model, -type) %>%
-  pivot_wider(names_from = Type, values_from = effect) %>%
-  rename(Model = pretty_model)
-
-effects %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 4: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the case-hospitalisation rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive case-hospitalisation rate.*
-
-## Hospitalisations and deaths
-
-```{r hfr,echo = FALSE}
-cfr <- assoc$hfr
-```
-
-```{r hfr_r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
-prop_data <- cfr$data %>%
-  mutate(cfr = deaths / cases)
-
-suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
-                      fill = region, size = deaths)) +
-  geom_jitter(pch = 21) +
-  facet_wrap(. ~ week_infection) +
-  scale_fill_brewer("", palette = "Set1") +
-  scale_y_continuous(labels = percent) +
-  xlab("Proportion with S gene dropped") +
-  ylab("Hospitalisation-fatality rate") +
-  theme_cowplot() +
-  labs(size = paste("Deaths")) +
-  theme(legend.position = "bottom",
-        legend.direction = "horizontal",
-        legend.box = "vertical"))
-```
-*Figure 3: Proportion with S gene dropped compared to the adjusted hospitalisation-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
-
-```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
-  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
-         model = str_replace_all(model, "_additive", "") %>%
-           str_replace_all("_multiplictive", "")) %>%
-  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
-           str_to_sentence(),
-         Type = type %>%
-           str_to_sentence()) %>%
-  mutate(pretty_model = case_when(
-    pretty_model == "Utla" ~ "UTLA",
-    TRUE ~ pretty_model
-  )) %>%
-  select(Type, type, pretty_model, model, `ELPD difference`)
-
-lc %>%
-  select(Type, Model = pretty_model, `ELPD difference`) %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 5: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
-
-
-```{r hfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
-to_per <- function(var) {
-  paste0(var)
-}
-effects <- lc %>%
-  select(-`ELPD difference`) %>%
-  mutate(effect = map2(type, model, ~ cfr$effect[[.x]][[.y]]),
-         effect = map_chr(effect, ~ paste0(to_per(.[2])," (", to_per(.[1]), ", ", to_per(.[3]), ")"))) %>%
-  select(-model, -type) %>%
-  pivot_wider(names_from = Type, values_from = effect) %>%
-  rename(Model = pretty_model)
-
-effects %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 6: Parameter $\alpha$ with 95% credible intervals for the both additive and multiplicative assumptions across all models evaluated. In the additive model the effect can be interpreted as a direct change in the hospitalisation-fatality rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive hospitalisation-fatality rate.*
 
 # Discussion
 
@@ -259,7 +139,7 @@ We studied the relationship between SGTF (as a proxy for the new variant of conc
 
 # Appendix: fits
 
-```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
+```{r fit, echo = FALSE,fig.width = 10, fig.height = 10, eval = FALSE}
 ## calculate predicted intervals
 plot_pred_int <- function(data, yrep, psis, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
 
