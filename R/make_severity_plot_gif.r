@@ -19,12 +19,13 @@ lagged_severity_data <- readRDS(here("data", "lagged_severity_data.rds"))
 source(here("R", "plot_severity.r"))
 plot <- suppressMessages(plot_severity(lagged_severity_data, alpha = 0.6))
 
-
 gif <- plot +
-ggtitle('Date: {closest_state}') +
-  transition_states(week_infection)
+labs(title = "Covid-19 severe outcome rates vs the proportion of S-gene target failure", 
+     subtitle = 'Date: {closest_state}') +
+  transition_states(week_infection) +
+  ease_aes('cubic-in-out')
 
-animate(gif, fps = 5, nframes = 100, renderer = gifski_renderer())
+animate(gif, renderer = gifski_renderer(), height = 960, width = 960)
 
 # Save --------------------------------------------------------------------
 anim_save(here("output", "severity.gif"))
