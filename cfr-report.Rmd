@@ -95,30 +95,6 @@ suppressWarnings(ggplot(prop_data, aes(x = prop_sgtf, y = cfr,
 
 *Figure 1: Proportion with S gene dropped compared to the adjusted case-fatality rate each week beginning Monday the 5th of October. Each point represents one UTLA, with the size given by the number of deaths by date of infection.*
 
-```{r echo = FALSE, results = 'asis'}
-lc <- tibble(model = names(cfr$loos$lc[["all"]][, 1]),
-             `ELPD difference` = round(cfr$loos$lc[["all"]][, "elpd_diff"], 2)) %>%
-  mutate(type = ifelse(grepl("additive", model), "additive", "multiplicative"),
-         model = str_replace_all(model, "_additive", "") %>%
-           str_replace_all("_multiplictive", "")) %>%
-  mutate(pretty_model =  str_replace_all(model, "_", " ")%>%
-           str_to_sentence(),
-         Type = type %>%
-           str_to_sentence()) %>%
-  mutate(pretty_model = case_when(
-    pretty_model == "Utla" ~ "UTLA",
-    TRUE ~ pretty_model
-  )) %>%
-  select(Type, type, pretty_model, model, `ELPD difference`)
-
-lc %>%
-  select(Type, Model = pretty_model, `ELPD difference`) %>%
-  kbl() %>%
-  kable_styling()
-```
-*Table 1: Model comparison by difference in expected log-predictive density. Models are identified by the covariates they include.*
-
-
 ```{r cfr_regression_log_coeff_table, echo = FALSE, results = 'asis'}
 to_per <- function(var) {
   paste0(var)

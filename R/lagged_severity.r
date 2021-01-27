@@ -14,7 +14,7 @@ library(loo)
 no_cores <- availableCores()
 
 # Get functions -----------------------------------------------------------
-source(here("R", "variant_model.r"))
+source(here("R", "lag_model.r"))
 source(here("R", "get_infections_data.r"))
 
 # Get data ----------------------------------------------------------------
@@ -53,7 +53,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
 # fit model grid in parallel
 fit_targets <- expand_grid(loc = c("utla", "region"), 
-                           effect_type = c("mutliplicative", "additive"), 
+                           effect_type = c("multiplicative", "additive"), 
                            target = c("cfr", "chr", "hfr"))
 
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
@@ -93,4 +93,4 @@ fits <- fits %>%
   mutate(loo = map(fit, loo, save_psis = TRUE))
 
 # Save results ------------------------------------------------------------
-saveRDS(fits, here("output", "lagged_associations.rds"))
+saveRDS(fits, here("output", "lagged_severity.rds"))

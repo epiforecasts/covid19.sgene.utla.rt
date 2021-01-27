@@ -52,7 +52,7 @@ plan("multisession", workers = mc_cores, earlySignal = TRUE)
 
 #define context specific args
 fit_brm_convolution <- function(formula, ...) {
-  brm_convolution(formula, control = list(adapt_delta = 0.95, max_treedepth = 12),
+  brm_convolution(formula, control = list(adapt_delta = 0.98, max_treedepth = 12),
                   iter = 3000, cores = stan_cores, ...)
 }
 # set context specific priors (based on mean in data)
@@ -100,4 +100,4 @@ fits <- fits %>%
                                    ~ paste0(.[2]," (", .[1], ", ", .[3], ")")))
 
 # Save output -------------------------------------------------------------
-saveRDS(fits, here("output", "convolution_associations.rds"))
+saveRDS(fits, here("output", "convolution_severity.rds"))
