@@ -153,8 +153,8 @@ source(here("R", "plot_severity.r"))
 suppressMessages(plot_severity(lagged_severity_data, alpha = 0.4))
 ```
 
-```{r multivariate-effects, results = "asis"} 
-present_table(effects_tab, cap = "Estimated adjusted effect of S-gene negativity on severity rates (median with with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations and delay approaches considered. In additive models the effect can be interpreted as a direct change in the rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive rate. Effect estimates are adjusted for location variability and for current case/hospital admissions.")
+```{r effects-tab, results = "asis"} 
+present_table(effects_tab, cap = "Estimated effect of S-gene negativity on severity rates (median with with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations, delay adjustment methods, and confounder adjustment. In additive models the effect can be interpreted as a direct change in the rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive rate. Confounders included in the adjusted model are location variability and current case/hospital admissions.")
 ```
 
 # Discussion
