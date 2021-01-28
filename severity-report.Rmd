@@ -36,67 +36,6 @@ lagged_severity_data <- readRDS(here("data", "lagged_severity_data.rds"))
 effects <- readRDS(here("data", "severity_sgtf_effect.rds"))
 ```
 
-For correspondence: sebastian.funk@lshtm.ac.uk
-
-## Abstract
-
-**Background:** Individual level data indicates S-gene target failure may be associated with increased case fatality rates, increased hospitalisation rates, and increased hospitalisation fatality rates. Whilst an individual level data approach represents the gold standard for observational analysis population level analysis may be helpful to triangulate findings, especially when individual data sources are confidential, or only partially representative. In this analysis, we use multiple approaches to evaluate public population level data for evidence of an association between S-gene target failure and severity measures.
-
-**Method:** We explored the association between the proportion of samples that were S-gene negative and the case fatality rate, hospitalisation rate, and hospitalisation fatality rate of Covid-19 aggregated at the UTLA and NHS region level. Two approaches were used with the first assuming a fixed lag between primary and secondary observations with the lag optimised using the Pearson's correlation coefficient. The second approach assumed that the secondary observations could be estimated using a convolution of primary observations multiplied by some scaling factor. For the fixed lag analysis we investigated both additive and negative effects of being S-gene negative and for the convolution approach we explored delays between observations that varied spatially. We present both univariate and multivariate estimates with the latter adjusted for spatial and temporal variation. 
-
-**Results:** TODO: summarise results.
-
-
-**Conclusions:** TODO: Results and what it means. Our convolution regression approach may be useful for others where individual data is not available or subject to biases. It has been implemented in a generalised framework with all code made publicly available.
-
-# Method
-
-## Data
-
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], hospitalisations with Covid-19 by UTLA [@covidnhsdata], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly, or daily, level and restricted the analysis to the period beginning Monday, 5 October.
-
-## Statistical analysis
-
-We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority and NHS region. We estimated the proportion of tests that were S-gene positive by date of infection shifting all estimates back by a week. We then conducted two analyses. In the first analysis lags between cases, admissions and deaths were estimated by maximising Pearson's correlation coefficient and all data was then adjusted using these lags to date of infection. In the second analysis the delay between observations (for example deaths and cases) was assumed to be log normal with this then being estimated in model either globally ("global convolution") or locally using a random effect ("local convolution"). All analyses were repeated at NHS region and upper-tier local authority (UTLA) scales. Futher details of each analysis are given in the following sections.
-
-### Fixed lag analysis
-
-We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) within 28 days by date of infection were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of infection scaled by the case fatality rate of S-gene positive cases ($c^+$) and S-gene negative cases ($c^-$),
-
-$$D_{i,t} \sim \mathrm{NB}\left(c^{+}\left(1-f_{it}\right)C_{i,t} + c^{-}f_{it}C_{i,t} + \epsilon,  \phi \right)$$
-where $i$ indicates UTLA or NHS region, $t$ week of infection, $\epsilon$ is an error term that accounts for imported deaths/admissions not linked to local cases/admissions, and $f_{it}$ is the fraction of cases that were found to be S-gene negative by UTLA each week. The case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively) of S-gene negative cases then assumed was then assumed to be a function of static local, and temporal variation.
-
-$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_{i,t}\right)$$
-where $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with variation over time incorporated using a thin plate spline. In other words, we stratify the data set either by UTLA or by week and determine whether differences in the associations between cases, admissions and deaths are explained by changes in proportion of cases that are SGTF over time and space, respectively.
-
-The S-gene negative case fatality rate was then assumed to be related to the S-gene positive case fatality rate via a multiplicative relationship,
-
-$$c^{-} = \alpha c^{+}$$
-
-or an additive relationship
-
-$$c^{-} = \alpha + c^{+}$$
-
-where $\alpha$ represents either the multiplicative change in case fatality rate or the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.
-
-
-### Convolution analysis
-
-We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) by date of report were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of report, convolved by a log normal delay, and scaled by a rate (which when using cases and deaths is the case fatality rate),
-
-
-$$D_{i,t} \sim \mathrm{NB}\left(c_i\sum_{\tau = 0}^{30} \xi_{i, \tau} C_{i, t-\tau},  \phi \right)$$
-
-where $i$ indicates UTLA or NHS region, $t$ day of report, $\xi_{i, \tau}$ is the probability mass function of a log normal distribution and may be either be static across all locations or vary by location, and $\tau$ indexes days prior to $t$. $c_i$ is the location specific case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively). $c_i$ is then estimated using,
-
-$$c_i = \mathrm{logit}^{-1}\left(\alpha f_{it} + \gamma_{i,t}\right)$$
-where, as for the fixed lag analysis, $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with time modelled using a thin plate spline. 
-
-
-All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
-
-# Results
-
 ```{r effects}
 make_effects_table <- function(effects) {
   effects %>%
@@ -142,11 +81,83 @@ present_table <- function(tbl, cap) {
 }
 
 effects_tab <- make_effects_table(effects)
+
+extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
+                        method = "Global lag") {
+  target <- enquo(target)
+  df %>% 
+    filter(effect_type %in% type, models %in% model, loc %in% agg,
+           convolution %in% method) %>% 
+    pull(!!target)
+}
 ```
 
-TODO: Discuss univariate findings and evidence in scatter plot. Start at UTLA level and summarise difference at NHS region (if any). Summarise differences across models.
+For correspondence: sebastian.funk@lshtm.ac.uk
 
-TODO: Discuss multivariate findings starting with UTLA and summarise difference at NHS region level (if any). Discuss impact of adjusting for covariates (and potentially subsets of covariates with these needing to be added to the SI). Discuss impact of convolution vs lag.
+## Abstract
+
+**Background:** Individual level data indicates S-gene target failure may be associated with increased case fatality rates, increased hospitalisation rates, and increased hospitalisation fatality rates. Whilst an individual level data approach represents the gold standard for observational analysis population level analysis may be helpful to triangulate findings, especially when individual data sources are confidential, or only partially representative. In this analysis, we use multiple approaches to evaluate public population level data for evidence of an association between S-gene target failure and severity measures.
+
+**Method:** We explored the association between the proportion of samples that were S-gene negative and the case fatality rate, hospitalisation rate, and hospitalisation fatality rate of Covid-19 aggregated at the UTLA and NHS region level. Two approaches were used with the first assuming a fixed lag between primary and secondary observations with the lag optimised using the Pearson's correlation coefficient. The second approach assumed that the secondary observations could be estimated using a convolution of primary observations multiplied by some scaling factor. For the fixed lag analysis we investigated both additive and negative effects of being S-gene negative and for the convolution approach we explored delays between observations that varied spatially. We present both univariate and multivariate estimates with the latter adjusted for spatial and temporal variation. 
+
+**Results:** TODO: summarise results.
+
+
+**Conclusions:** TODO: Results and what it means. Our convolution regression approach may be useful for others where individual data is not available or subject to biases. It has been implemented in a generalised framework with all code made publicly available.
+
+# Method
+
+## Data
+
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], hospitalisations with Covid-19 by UTLA [@covidnhsdata], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly, or daily, level and restricted the analysis to the period beginning Monday, 5 October. PCR testing data was only available aggregated to weeks.
+
+## Statistical analysis
+
+We calculated the weekly proportion of positive tests that were S-gene negative over time by local authority and NHS region. We estimated the proportion of tests that were S-gene positive by date of infection shifting all estimates back by a week. We then conducted two analyses. In the first analysis lags between cases, admissions and deaths were estimated by maximising Pearson's correlation coefficient and all data was then adjusted using these lags to date of infection. In the second analysis the delay between observations (for example deaths and cases) was assumed to be log normal with this then being estimated in model either globally ("global convolution") or locally using a random effect ("local convolution"). All analyses were repeated at NHS region and upper-tier local authority (UTLA) scales. Futher details of each analysis are given in the following sections.
+
+### Fixed lag analysis
+
+We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) within 28 days by date of infection were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of infection scaled by the case fatality rate of S-gene positive cases ($c^+$) and S-gene negative cases ($c^-$),
+
+$$D_{i,t} \sim \mathrm{NB}\left(c^{+}\left(1-f_{it}\right)C_{i,t} + c^{-}f_{it}C_{i,t} + \epsilon,  \phi \right)$$
+where $i$ indicates UTLA or NHS region, $t$ week of infection, $\epsilon$ is an error term that accounts for imported deaths/admissions not linked to local cases/admissions, and $f_{it}$ is the fraction of cases that were found to be S-gene negative by UTLA each week. The case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively) of S-gene negative cases then assumed was then assumed to be a function of static local, and temporal variation.
+
+$$c^{+} = \mathrm{logit}^{-1}\left(\gamma_{i,t}\right)$$
+where $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with variation over time incorporated using a thin plate spline. In other words, we stratify the data set either by UTLA or by week and determine whether differences in the associations between cases, admissions and deaths are explained by changes in proportion of cases that are SGTF over time and space, respectively.
+
+The S-gene negative case fatality rate was then assumed to be related to the S-gene positive case fatality rate via a multiplicative relationship,
+
+$$c^{-} = \alpha c^{+}$$
+
+or an additive relationship
+
+$$c^{-} = \alpha + c^{+}$$
+
+where $\alpha$ represents either the multiplicative change in case fatality rate or the additive change. These alternative parameterisations represent either a population wide effect for the former parameterisation or a subpopulation effect in the latter parameterisation.
+
+
+### Convolution analysis
+
+We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) by date of report were a function of Covid-19 notifications/admissions ($C_{i,t}$) by date of report, convolved by a log normal delay, and scaled by a rate (which when using cases and deaths is the case fatality rate),
+
+
+$$D_{i,t} \sim \mathrm{NB}\left(c_i\sum_{\tau = 0}^{30} \xi_{i, \tau} C_{i, t-\tau},  \phi \right)$$
+
+where $i$ indicates UTLA or NHS region, $t$ day of report, $\xi_{i, \tau}$ is the probability mass function of a log normal distribution and may be either be static across all locations or vary by location, and $\tau$ indexes days prior to $t$. $c_i$ is the location specific case fatality rate (or hospitalisation-fatality rate / case-hospitalisation rate, respectively). $c_i$ is then estimated using,
+
+$$c_i = \mathrm{logit}^{-1}\left(\alpha f_{it} + \gamma_{i,t}\right)$$
+where, as for the fixed lag analysis, $\gamma_{i,t}$ is either a UTLA-level intercept $\gamma_{i,t}\equiv \delta_i$ corresponding to the baseline case fatality rate per UTLA, or a temporal intercept $\gamma_{i,t}\equiv \theta_t$ corresponding to the baseline case fatality rate over time, with time modelled using a thin plate spline. 
+
+
+All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/).
+
+# Results
+
+Visual inspection of the relationship between S-gene negativity and the case fatality rate, case hospitalisation rate, and hospitalisation fatality rate was difficult at both the NHS region and UTLA level due to the large amount of variance both between areas and over time (Figure 1). However, aggregating to the NHS region level gave some indication of a relationship between an increase in the proportion of samples that were S-gene negative and an increase negative outcomes.
+
+Using our modelling framework, we found consistent evidence of an association between S-gene negativity and an increase in the case fatality rate (CFR) of Covid-19 though the strength of the effect varied across method and spatial aggregation (Table 1). In general, the strength of the effect was increased by adjusting for spatial differences (both for the delay between cases and deaths and spatial variation in the rates), and by current cases/admissions. However, reducing the level of aggregation from NSH region to UTLA level reduced the observed effect across all approaches. When the effect of SGTF was assumed to be additive we estimated that the associated percentage increase in the CFR due to SGTF was `r extract_eff("Case fatality rate", type = "Additive", method = "Global lag")` using the optimised global lag approach at the UTLA level. When the effect was instead assumed to be multiplicative SGTF was associated with an increase in the CFR of `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global lag")` using the global lag approach at the UTLA level, `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global convolution")` using the global convolution approach at the UTLA level, and `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` at the NHS region level. For all methods the unadjusted effect was lower but was still substantially greater than 1 using either of the convolution approaches or using data aggregated to the UTLA level rather than to NHS region.
+
+The effect of S-gene negativity on the case hospitalisation rate and the hospitalisation rate presented the same spatial patterns as for the case fatality rate with estimates for both being broadly consistent with those of the effect on the case fatality rate across models (Table 1). Across all models that at least adjusted for location specific intercepts the effect on the case hospitalisation rate was higher than the effect on the hospitalisation fatality rate. When all hypothesised confounders were accounted for we found that the minimum estimated effect on the case hospitalisation rate associated with SGTF was `r extract_eff("Case hospitalisation rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` when data was aggregated to the NHS region level and a local convolution was assumed. Using the same method indicated little evidence of an effect of SGTF on the hospitalisation fatality rate (`r extract_eff("Hospitalisation fatality rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")`). though dropping the assumption of a locally varying delay between hospitalisation and death and instead aggregating to the UTLA level increased this to `r extract_eff("Hospitalisation fatality rate", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`. Visual inspection supports the direction of these findings and the uncreased uncertainty in estimates for the effect on the hospitalisation fataility rate (Figure 1).
 
 ```{r scatter, echo=FALSE, fig.width=10, fig.height=10, fig.cap = "Proportion with S gene dropped compared to the adjusted severity rates each week beginning Monday the 5th of October by NHS region and upper-tier local authority (UTLA). Each point represents one NHS region or UTLA and one week, with the size of the point given by the number of PCR tests."}
 source(here("R", "plot_severity.r"))

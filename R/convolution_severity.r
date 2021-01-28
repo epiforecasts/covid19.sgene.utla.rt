@@ -66,10 +66,6 @@ fit_targets <- expand_grid(loc = c("utla", "region"),
                            conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
 
-# restrict grid to those with a fixed convolution distribution
-fit_targets <- fit_targets %>% 
-  filter(!(conv %in% "loc" & loc %in% "utla"))
-
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
   message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
