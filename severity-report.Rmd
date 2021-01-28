@@ -36,6 +36,62 @@ lagged_severity_data <- readRDS(here("data", "lagged_severity_data.rds"))
 effects <- readRDS(here("data", "severity_sgtf_effect.rds"))
 ```
 
+```{r effects}
+make_effects_table <- function(effects) {
+  effects %>%
+  mutate(target = case_when(target %in% "cfr" ~ "Case fatality rate",
+                            target %in% "chr" ~ "Case hospitalisation rate",
+                            target %in% "hfr" ~ "Hospitalisation fatality rate"),
+         models = case_when(models %in% "intercept" ~ "Unadjusted",
+                            models %in% "loc" ~ "Location only",
+                            models %in% "all" ~ "Adjusted")) %>% 
+  drop_na(models) %>% 
+  pivot_wider(names_from = target, values_from = effect) %>% 
+  arrange(effect_type, convolution, loc) %>% 
+  mutate(convolution = as.character(convolution)) %>% 
+  mutate_if(is.character, str_to_sentence) %>% 
+  mutate(loc = ifelse(loc %in% "Utla", "UTLA", "NHS region"))
+}
+
+present_table <- function(tbl, cap) {
+  tbl <- tbl %>%   
+  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("rate")) 
+  
+  additive <- tbl %>% 
+    filter(`Effect type` %in% "Additive")
+  mutl <- tbl %>% 
+    filter(`Effect type` %in% "Multiplicative")
+  
+  tbl <- additive %>% 
+    add_row() %>%
+    mutate_all(~ replace_na(., "")) %>% 
+    bind_rows(mutl)
+  
+  tbl %>% 
+  group_by(`Effect type`, Method, Aggregation) %>% 
+  mutate(Aggregation = c(Aggregation[1], rep("", n() - 1)))  %>% 
+  group_by(`Effect type`, Method) %>% 
+  mutate(Method = c(Method[1], rep("", n() - 1))) %>% 
+  group_by(`Effect type`) %>% 
+  mutate(`Effect type` = c(`Effect type`[1], rep("", n() - 1))) %>% 
+  ungroup() %>% 
+  kbl(caption = cap, booktabs = TRUE) %>%
+  kable_styling() %>%
+  landscape()
+}
+
+effects_tab <- make_effects_table(effects)
+
+extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
+                        method = "Global lag") {
+  target <- enquo(target)
+  df %>% 
+    filter(effect_type %in% type, models %in% model, loc %in% agg,
+           convolution %in% method) %>% 
+    pull(!!target)
+}
+```
+
 For correspondence: sebastian.funk@lshtm.ac.uk
 
 ## Abstract
@@ -97,68 +153,11 @@ All models were implemented using the `brms` [@brms] package in `R`. All code re
 
 # Results
 
-```{r effects}
-make_effects_table <- function(effects) {
-  effects %>%
-  mutate(target = case_when(target %in% "cfr" ~ "Case fatality rate",
-                            target %in% "chr" ~ "Case hospitalisation rate",
-                            target %in% "hfr" ~ "Hospitalisation fatality rate"),
-         models = case_when(models %in% "intercept" ~ "Unadjusted",
-                            models %in% "loc" ~ "Location only",
-                            models %in% "all" ~ "Adjusted")) %>% 
-  drop_na(models) %>% 
-  pivot_wider(names_from = target, values_from = effect) %>% 
-  arrange(effect_type, convolution, loc) %>% 
-  mutate(convolution = as.character(convolution)) %>% 
-  mutate_if(is.character, str_to_sentence) %>% 
-  mutate(loc = ifelse(loc %in% "Utla", "UTLA", "NHS region"))
-}
-
-present_table <- function(tbl, cap) {
-  tbl <- tbl %>%   
-  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("rate")) 
-  
-  additive <- tbl %>% 
-    filter(`Effect type` %in% "Additive")
-  mutl <- tbl %>% 
-    filter(`Effect type` %in% "Multiplicative")
-  
-  tbl <- additive %>% 
-    add_row() %>%
-    mutate_all(~ replace_na(., "")) %>% 
-    bind_rows(mutl)
-  
-  tbl %>% 
-  group_by(`Effect type`, Method, Aggregation) %>% 
-  mutate(Aggregation = c(Aggregation[1], rep("", n() - 1)))  %>% 
-  group_by(`Effect type`, Method) %>% 
-  mutate(Method = c(Method[1], rep("", n() - 1))) %>% 
-  group_by(`Effect type`) %>% 
-  mutate(`Effect type` = c(`Effect type`[1], rep("", n() - 1))) %>% 
-  ungroup() %>% 
-  kbl(caption = cap, booktabs = TRUE) %>%
-  kable_styling() %>%
-  landscape()
-}
-
-effects_tab <- make_effects_table(effects)
-
-extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
-                        method = "Global lag") {
-  target <- enquo(target)
-  df %>% 
-    filter(effect_type %in% type, models %in% model, loc %in% agg,
-           convolution %in% method) %>% 
-    pull(!!target)
-}
-```
-
-
 Visual inspection of the relationship between S-gene negativity and the case fatality rate, case hospitalisation rate, and hospitalisation fatality rate was difficult at both the NHS region and UTLA level due to the large amount of variance both between areas and over time (Figure 1). However, aggregating to the NHS region level gave some indication of a relationship between an increase in the proportion of samples that were S-gene negative and an increase negative outcomes.
 
 Using our modelling framework, we found consistent evidence of an association between S-gene negativity and an increase in the case fatality rate (CFR) of Covid-19 though the strength of the effect varied across method and spatial aggregation (Table 1). In general, the strength of the effect was increased by adjusting for spatial differences (both for the delay between cases and deaths and spatial variation in the rates), and by current cases/admissions. However, reducing the level of aggregation from NSH region to UTLA level reduced the observed effect across all approaches. When the effect of SGTF was assumed to be additive we estimated that the associated percentage increase in the CFR due to SGTF was `r extract_eff("Case fatality rate", type = "Additive", method = "Global lag")` using the optimised global lag approach at the UTLA level. When the effect was instead assumed to be multiplicative SGTF was associated with an increase in the CFR of `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global lag")` using the global lag approach at the UTLA level, `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global convolution")` using the global convolution approach at the UTLA level, and `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` at the NHS region level. For all methods the unadjusted effect was lower but was still substantially greater than 1 using either of the convolution approaches or using data aggregated to the UTLA level rather than to NHS region.
 
-TODO: Discuss multivariate findings starting with UTLA and summarise difference at NHS region level (if any). Discuss impact of adjusting for covariates (and potentially subsets of covariates with these needing to be added to the SI). Discuss impact of convolution vs lag.
+The effect of S-gene negativity on the case hospitalisation rate and the hospitalisation rate presented the same spatial patterns as for the case fatality rate with estimates for both being broadly consistent with those of the effect on the case fatality rate across models (Table 1). Across all models that at least adjusted for location specific intercepts the effect on the case hospitalisation rate was higher than the effect on the hospitalisation fatality rate. When all hypothesised confounders were accounted for we found that the minimum estimated effect on the case hospitalisation rate associated with SGTF was `r extract_eff("Case hospitalisation rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` when data was aggregated to the NHS region level and a local convolution was assumed. Using the same method indicated little evidence of an effect of SGTF on the hospitalisation fatality rate (`r extract_eff("Hospitalisation fatality rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")`). though dropping the assumption of a locally varying delay between hospitalisation and death and instead aggregating to the UTLA level increased this to `r extract_eff("Hospitalisation fatality rate", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`. Visual inspection supports the direction of these findings and the uncreased uncertainty in estimates for the effect on the hospitalisation fataility rate (Figure 1).
 
 ```{r scatter, echo=FALSE, fig.width=10, fig.height=10, fig.cap = "Proportion with S gene dropped compared to the adjusted severity rates each week beginning Monday the 5th of October by NHS region and upper-tier local authority (UTLA). Each point represents one NHS region or UTLA and one week, with the size of the point given by the number of PCR tests."}
 source(here("R", "plot_severity.r"))
