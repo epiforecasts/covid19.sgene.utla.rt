@@ -3,7 +3,7 @@ title: "Population-level association between S-gene target failure and the relat
 subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 12 January, 2021
+date: 29 January, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
@@ -100,10 +100,9 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 **Method:** We explored the association between the proportion of samples that were S-gene negative and the case fatality rate, hospitalisation rate, and hospitalisation fatality rate of Covid-19 aggregated at the UTLA and NHS region level. Two approaches were used with the first assuming a fixed lag between primary and secondary observations with the lag optimised using the Pearson's correlation coefficient. The second approach assumed that the secondary observations could be estimated using a convolution of primary observations multiplied by some scaling factor. For the fixed lag analysis we investigated both additive and negative effects of being S-gene negative and for the convolution approach we explored delays between observations that varied spatially. We present both univariate and multivariate estimates with the latter adjusted for spatial and temporal variation. 
 
-**Results:** TODO: summarise results.
+**Results:** We found consistent evidence across modelling approaches of an association between an increase in case fatality rate of Covid-19 and S-gene negativity with both additive and multiplicative assumptions. At the ULTA level, using the global lag method, we estimated that SGTF was associated with an increase in the case fatality rate of `r extract_eff("Case fatality rate", type = "Additive", method = "Global lag")` or a multiplicative increase of `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global lag")`. The convolution approach reduced the estimated effect to  `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global convolution")` at the UTLA level. We found consistent evidence for an increase in case hospitalisation rates (CHRs) and hospitalisation fatality rates (HFRs) with the effect on CHRs ( `r extract_eff("Case hospitalisation rate", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`) being larger than that on HFRs (`r extract_eff("Hospitalisation fatality rate", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`) when data was aggregated to the UTLA level and a global convolution was used.
 
-
-**Conclusions:** TODO: Results and what it means. Our convolution regression approach may be useful for others where individual data is not available or subject to biases. It has been implemented in a generalised framework with all code made publicly available.
+**Conclusions:** Population level surveillance data supports findings from other studies using individual level data that SGTF is associated with an increase in the case fatality rate and indicates that the majority of this effect is likely linked to an increase in the case hospitalisation rate rather than the hospitalisation fatality rate. Our methods and code are available may be generalised to other research settings where individual data is not available.
 
 # Introduction
 
@@ -192,10 +191,8 @@ Our results are indicative only as they make use of aggregated data that is subj
 
 TODO: Improve limitations.
 
-The convolution regression framework outlined in this paper has been developed in an application independent format and so is readily generalisable to other research questions investigating the dependence between primary and secondary observations that depend on some delay distribution and some scaling factor. Future work will explore this approach further and apply it to other relevant real time analysis questions when individual data is not available or biased.
 
-
-TODO: Conclusions. What does it mean. Why is this a good way of doing it. What can we do next. Method generalisability. Wrap up. 
+Population level surveillance data supports findings from other studies using individual level data that SGTF is associated with an increase in the case fatality rate and indicates that the majority of this effect is likely linked to an increase in the case hospitalisation rate rather than the hospitalisation fatality rate. This evidence is indicative only due to the potential for unadjusted confounding and should be supported by further studies using individual level data. Our methods are available as an open source extension to a bayesian regression package and may be used to study case fatality rates, case hospitalisation rates and hospitalisation fatality rates in other settings where individual data is not available.
 
 # References
 
