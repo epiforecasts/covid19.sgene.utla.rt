@@ -98,30 +98,50 @@ All models were implemented using the `brms` [@brms] package in `R`. All code re
 # Results
 
 ```{r effects}
-make_effects_table <- function(effects, model) {
+make_effects_table <- function(effects) {
   effects %>%
-  filter(models %in% model) %>% 
-  select(-models) %>% 
   mutate(target = case_when(target %in% "cfr" ~ "Case fatality rate",
                             target %in% "chr" ~ "Case hospitalisation rate",
-                            target %in% "hfr" ~ "Hospitalisation fatality rate")) %>% 
+                            target %in% "hfr" ~ "Hospitalisation fatality rate"),
+         models = case_when(models %in% "intercept" ~ "Unadjusted",
+                            models %in% "loc" ~ "Location only",
+                            models %in% "all" ~ "Adjusted")) %>% 
+  drop_na(models) %>% 
   pivot_wider(names_from = target, values_from = effect) %>% 
   arrange(effect_type, convolution, loc) %>% 
   mutate(convolution = as.character(convolution)) %>% 
   mutate_if(is.character, str_to_sentence) %>% 
-  mutate(loc = ifelse(loc %in% "Utla", "UTLA", "NHS region")) %>% 
-  select(Method = convolution, Aggregation = loc, `Effect type` = effect_type, contains("rate"))
+  mutate(loc = ifelse(loc %in% "Utla", "UTLA", "NHS region"))
 }
 
 present_table <- function(tbl, cap) {
-  tbl %>%   
+  tbl <- tbl %>%   
+  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("rate")) 
+  
+  additive <- tbl %>% 
+    filter(`Effect type` %in% "Additive")
+  mutl <- tbl %>% 
+    filter(`Effect type` %in% "Multiplicative")
+  
+  tbl <- additive %>% 
+    add_row() %>%
+    mutate_all(~ replace_na(., "")) %>% 
+    bind_rows(mutl)
+  
+  tbl %>% 
+  group_by(`Effect type`, Method, Aggregation) %>% 
+  mutate(Aggregation = c(Aggregation[1], rep("", n() - 1)))  %>% 
+  group_by(`Effect type`, Method) %>% 
+  mutate(Method = c(Method[1], rep("", n() - 1))) %>% 
+  group_by(`Effect type`) %>% 
+  mutate(`Effect type` = c(`Effect type`[1], rep("", n() - 1))) %>% 
+  ungroup() %>% 
   kbl(caption = cap, booktabs = TRUE) %>%
-  kable_styling() %>% 
+  kable_styling() %>%
   landscape()
 }
 
-univariate_effects <- make_effects_table(effects, "loc")
-multivariate_effects <- make_effects_table(effects, "all")
+effects_tab <- make_effects_table(effects)
 ```
 
 TODO: Discuss univariate findings and evidence in scatter plot. Start at UTLA level and summarise difference at NHS region (if any). Summarise differences across models.
@@ -133,12 +153,8 @@ source(here("R", "plot_severity.r"))
 suppressMessages(plot_severity(lagged_severity_data, alpha = 0.4))
 ```
 
-```{r univariate-effects, results = "asis"} 
-present_table(univariate_effects, cap = "Estimated unadjusted effect of S-gene negativity on severity rates (median with with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations and delay approaches considered. In additive models the effect can be interpreted as a direct change in the rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive rate.")
-```
-
 ```{r multivariate-effects, results = "asis"} 
-present_table(multivariate_effects, cap = "Estimated adjusted effect of S-gene negativity on severity rates (median with with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations and delay approaches considered. In additive models the effect can be interpreted as a direct change in the rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive rate. Effect estimates are adjusted for location variability and for current case/hospital admissions.")
+present_table(effects_tab, cap = "Estimated adjusted effect of S-gene negativity on severity rates (median with with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations and delay approaches considered. In additive models the effect can be interpreted as a direct change in the rate related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive rate. Effect estimates are adjusted for location variability and for current case/hospital admissions.")
 ```
 
 # Discussion
