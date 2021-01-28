@@ -53,7 +53,7 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 ## Data
 
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], hospitalisations with Covid-19 by UTLA [@covidnhsdata], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly, or daily, level and restricted the analysis to the period beginning Monday, 5 October.
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], hospitalisations with Covid-19 by UTLA [@covidnhsdata], deaths linked to Covid-19 notification within 28 days of notification [@ukgov], and S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe]. We aggregated the data at the weekly, or daily, level and restricted the analysis to the period beginning Monday, 5 October. PCR testing data was only available aggregated to weeks.
 
 ## Statistical analysis
 
@@ -142,9 +142,21 @@ present_table <- function(tbl, cap) {
 }
 
 effects_tab <- make_effects_table(effects)
+
+extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
+                        method = "Global lag") {
+  target <- enquo(target)
+  df %>% 
+    filter(effect_type %in% type, models %in% model, loc %in% agg,
+           convolution %in% method) %>% 
+    pull(!!target)
+}
 ```
 
-TODO: Discuss univariate findings and evidence in scatter plot. Start at UTLA level and summarise difference at NHS region (if any). Summarise differences across models.
+
+Visual inspection of the relationship between S-gene negativity and the case fatality rate, case hospitalisation rate, and hospitalisation fatality rate was difficult at both the NHS region and UTLA level due to the large amount of variance both between areas and over time (Figure 1). However, aggregating to the NHS region level gave some indication of a relationship between an increase in the proportion of samples that were S-gene negative and an increase negative outcomes.
+
+Using our modelling framework, we found consistent evidence of an association between S-gene negativity and an increase in the case fatality rate (CFR) of Covid-19 though the strength of the effect varied across method and spatial aggregation (Table 1). In general, the strength of the effect was increased by adjusting for spatial differences (both for the delay between cases and deaths and spatial variation in the rates), and by current cases/admissions. However, reducing the level of aggregation from NSH region to UTLA level reduced the observed effect across all approaches. When the effect of SGTF was assumed to be additive we estimated that the associated percentage increase in the CFR due to SGTF was `r extract_eff("Case fatality rate", type = "Additive", method = "Global lag")` using the optimised global lag approach at the UTLA level. When the effect was instead assumed to be multiplicative SGTF was associated with an increase in the CFR of `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global lag")` using the global lag approach at the UTLA level, `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Global convolution")` using the global convolution approach at the UTLA level, and `r extract_eff("Case fatality rate", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` at the NHS region level. For all methods the unadjusted effect was lower but was still substantially greater than 1 using either of the convolution approaches or using data aggregated to the UTLA level rather than to NHS region.
 
 TODO: Discuss multivariate findings starting with UTLA and summarise difference at NHS region level (if any). Discuss impact of adjusting for covariates (and potentially subsets of covariates with these needing to be added to the SI). Discuss impact of convolution vs lag.
 
