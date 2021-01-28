@@ -105,6 +105,13 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 **Conclusions:** TODO: Results and what it means. Our convolution regression approach may be useful for others where individual data is not available or subject to biases. It has been implemented in a generalised framework with all code made publicly available.
 
+# Introduction
+
+TODO: Why
+TODO: Background
+TODO: What
+TODO: Aim
+
 # Method
 
 ## Data
