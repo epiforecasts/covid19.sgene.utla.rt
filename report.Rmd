@@ -3,7 +3,7 @@ title: "Local area reproduction numbers and S-gene target failure"
 subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 8 January, 2021
+date: 28 January, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
@@ -107,6 +107,10 @@ We used a Student's t-distribution observation model with a single variance para
 
 ```{r load-models, echo = FALSE}
 models <- readRDS(here("output", "sgene_model_comparison.rds"))
+long <- readRDS(here("output", "sgene_fits_long_gt.rds")) %>%
+  .$models %>%
+  .$dynamic %>%
+  .$interventions_random_region
 
 effect_size <- function(gt, model, pos = 2) {
   paste0(models[[gt]]$post[[model]][pos] * 100,"%")
@@ -133,12 +137,12 @@ plot_rt <- function(rt_data) {
         legend.direction = "horizontal",
         legend.box = "vertical")
 }
-suppressWarnings(plot_rt(short_rt))
+suppressWarnings(plot_rt(long_rt))
 ```
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
-    "*Figure 2: Mean reproduction numbers using a generation time with a mean of 3.6 days since the week beginning ",
+    "*Figure 2: Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
     format(min(utla_rt$week_infection), "%d %B, %Y"),
     ", compared to the proportion of all test-positives tested for S-gene",
     " that tested S-gene positive/negative that week. Each point",
@@ -182,10 +186,60 @@ fn %>%
 ```
 *Table 2: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene negative cases.*
 
+```{r regression_estimates, echo = FALSE, results = 'asis'}
+effects <- long %>%
+  tidybayes::spread_draws(`b_(tier|groc|parks|trans|work|res).*`,
+                          regex = TRUE) %>%
+  tidybayes::median_qi(.width = c(.95, .50)) %>%
+  tidyr::pivot_longer(dplyr::starts_with("b_")) %>%
+  dplyr::mutate(name =
+                  dplyr::if_else(grepl("\\.", name), name,
+                                 paste(name, .point, sep = "."))) %>%
+  tidyr::separate(name, c("variable", "name"), sep = "\\.") %>%
+  dplyr::mutate(value = exp(value)) %>%
+  tidyr::pivot_wider() %>%
+  dplyr::mutate(type = dplyr::if_else(grepl("^b_tier", variable),
+                                      "Intervention", "Mobility")) %>%
+  dplyr::mutate(variable = sub("^b_", "", variable),
+                variable = sub("^tier", "", variable),
+                variable = gsub("_", " ", variable),
+                variable = stringi::stri_trans_totitle(variable)) %>%
+  dplyr::mutate(variable = dplyr::if_else(variable == "National Lockdown",
+                                          "National Lockdown Jan 2021",
+                                          variable),
+                variable = dplyr::if_else(variable == "National Lockdown Nov",
+                                          "National Lockdown Nov 2020",
+                                          variable)) %>%
+  dplyr::arrange(type, variable) %>%
+  dplyr::mutate(variable = factor(variable, levels = unique(variable)),
+                variable = forcats::fct_rev(variable))
+
+ggplot2::ggplot(effects, aes(x = variable, y = median,
+                             ymin = lower, ymax = upper, color = type)) +
+  ggdist::geom_pointinterval() +
+  ggplot2::scale_colour_brewer(palette = "Set1") +
+  ggplot2::xlab("") +
+  ggplot2::ylab("Posterior R ratio") +
+  ggplot2::ylim(c(0.25, 1.75)) +
+  ggplot2::geom_hline(yintercept = 1, linetype = "dashed") +
+  ggplot2::coord_flip() +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(legend.position = "none")
+
+intercept <- long %>%
+  spread_draws(b_Intercept ) %>%
+  tidybayes::median_qi(.width = c(.95)) %>%
+  tidyr::pivot_longer(c(b_Intercept, .lower, .upper)) %>%
+  dplyr::mutate(value = exp(value)) %>%
+  tidyr::pivot_wider()
+```
+
+*Figure 3: Parameter estimates (R ratios) of the Regional static model. These correspond to a multiplicative effect on a baseline R=`r round(intercept$b_Intercept, 1)` (95% CI: `r round(intercept$.lower, 2)`--`r round(intercept$.upper, 2)`). Intervention indicators are coloured in red, and mobility indicators in blue*
+
 ```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
 ## calculate predicted intervals
-plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
-
+plot_pred_int <- function(gt, model,
+                          quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
   y <- models[[gt]]$y
   yrep <- models[[gt]]$yrep[[model]]
   psis <- models[[gt]]$psis[[model]]
@@ -224,13 +278,13 @@ plot_pred_int <- function(gt, model, quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95))
   print(p)
 }
 
-p <- plot_pred_int("short", "interventions_time_by_random_region")
+p <- plot_pred_int("long", "interventions_random_region")
 ```
-*Figure 3: Predictions of the best fitting short generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
+*Figure 3: Predictions of the regional static model with long generation interval (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
 
 # Discussion
 
-We studied the relationship between SGTF (as a proxy for the new variant of concern) and the effective reproduction number using three related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model with region-specific splines fitted the best yielding central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in R with short and long generation interval, respectively. In principle this could be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-regions UTLA-level differences. Indeed, the model that modelled all temporal variation as related to interventions, mobility and SGTF (central estimates: `r effect_size("short","interventions_random_region")` and `r effect_size("long","interventions_random_region")` increase with short and long generation interval, respectively). This model yielded a poorer fit to the data than the more flexible models that allowed for variation over time not ascribed to these factors, suggesting that it is affected by confounders not included in the model.
+We studied the relationship between SGTF (as a proxy for the new variant of concern) and the effective reproduction number using three related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The modelled that associated all temporal variation with interventions, mobility and SGTF produced the largest increases (central estimates: `r effect_size("long","interventions_random_region")` and `r effect_size("short","interventions_random_region")` increase with long and short generation interval, respectively). A more conservative model with region-specific splines yielded central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in R with short and long generation interval, respectively. While this model yielded the best fit to the data the estimate of increased R associated with SGTF may well be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-regions UTLA-level differences. On the other hand, the fact that this model yielded a better fit than the model without splines suggests that that model is affected by confounders not included in the model.
 
 Our estimates with the longer generation interval without adjusting for additional residual variation over time are consistent with ones from two other modelling studies using similar generation intervals (5.5 and 6.5 days, respectively), which were in the order of a 50-74% [@davies2020] or 50-75% [@imperial42] increase. Shorter generation intervals lead to reproduction numbers closer to 1 and thus possibly lower estimates of a multiplicative effect. This may be a particular issue where the effect of the variant would cause the reproduction number to cross 1.
 
@@ -241,26 +295,4 @@ We found consistent evidence that SGTF was associated with increased reproductio
 # References
 
 <div id = 'refs'></div>
-
-# Supplementary Information
-
-```{r r_vs_prop_long, echo = FALSE,fig.width = 10, fig.height = 10}
-suppressWarnings(plot_rt(long_rt))
-```
-
-```{r results = 'asis', echo = FALSE}
-cat(sep = "",
-    "*Supplementary Figure 1: Mean reproduction numbers using a generation ",
-    "time with a mean of 5.5 days since the week beginning ",
-    format(min(utla_rt$week_infection), "%d %B, %Y"),
-    ", compared to the proportion of all test-positives tested for S-gene",
-    " that tested S-gene positive/negative that week. Each point ",
-    " represents one UTLA.*")
-```
-
-```{r long-fit, echo = FALSE,fig.width = 10, fig.height = 10}
-p <- plot_pred_int("long", "interventions_time_by_random_region")
-```
-*Supplementary Figure 2: Predictions of the best fitting long generation interval model (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
-
 
