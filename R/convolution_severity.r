@@ -61,11 +61,16 @@ priors[["cfr"]] <- c(prior("normal(-4, 0.5)", class = "Intercept"))
 priors[["chr"]] <- c(prior("normal(-2.5, 0.5)", class = "Intercept"))
 priors[["hfr"]] <- c(prior("normal(-1, 0.5)", class = "Intercept"))
 
-# fit model grid in parallel
+# model grid
 fit_targets <- expand_grid(loc = c("utla", "region"), 
                            conv = c("fixed", "loc"), 
                            target = c("cfr", "chr", "hfr"))
 
+# drop currently not tractable combinations
+fit_targets <- fit_targets %>% 
+  filter(!(loc %in% "utla" & conv %in% "loc"))
+
+# fit models in parallel
 fits <- future_lapply(1:nrow(fit_targets), function(i) {
   ft <- fit_targets[i, ]
   message("Fitting ", ft$target, " at the ", ft$loc, " level using following convolution: ", ft$conv)
