@@ -10,7 +10,8 @@ options(mc.cores = detectCores())
 # Get data ----------------------------------------------------------------
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
-  filter(week_infection > "2020-10-01")
+  filter(week_infection > "2020-10-01") %>%
+  mutate(tier = if_else(tier == "none", "_none", tier))
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
