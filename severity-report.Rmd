@@ -180,6 +180,36 @@ We studied the relationship between SGTF (as a proxy for the new variant of conc
 
 Our estimates for the association between SGTF and the case fatality rate were comparable to those from individual based approaches but...
 
+NERVTAG [@nervtag]
+PHE [@phe2]
+LSHTM [@lshtm-davies]
+CO-CIN [@cocin]
+Imperial [@imperial]
+
+a. LSHTM: reported that the relative hazard of death within 28 days of test for VOC-infected individuals compared to non-VOC was 1.35 (95%CI 1.08-1.68).
+b. Imperial College London: mean ratio of CFR for VOC-infected individuals compared to non-VOC was 1.36 (95%CI 1.18-1.56) by a case-control weighting method, 1.29 (95%CI 1.07-1.54) by a standardised CFR method.
+c. University of Exeter: mortality hazard ratio for VOC-infected individuals compared to non-VOC was 1.91 (1.35 - 2.71).
+d. Theseanalyseswerealladjustedinvariouswaysforage,location,timeand other variables.
+
+
+5. An updated PHE matched cohort analysis has reported a death risk ratio for VOC- infected individuals compared to non-VOC of 1.65 (95%CI 1.21-2.25).
+
+6. There are several limitations to these datasets including representativeness of death data (<10% of all deaths are included in some datasets), power, potential biases in case ascertainment and transmission setting.
+
+
+9. An analysis of CO-CIN data has not identified an increased risk of death in hospitalised VOC B.1.1.7 cases. However, increased severity may not necessarily be reflected by increased in-hospital death risk.
+10. Since the time lag from infection to hospitalisation and death is relatively long, data will accrue in coming weeks, at which time the analyses will become more definitive.
+
+13. Both papers used the same core dataset of SGTF cases identified through Pillar 2 testing linked to the PHE COVID-19 deaths line list: a paper from LSHTM [2] and a paper from Imperial College London [3].
+
+
+b.
+ThedatasetusedintheLSHTM,Imperial,ExeterandPHEanalysesisbased on a limited subset of the total deaths. This includes approximately 8% of the total deaths occurring during the study period. Of all coronavirus deaths, approximately 26% occur in individuals who have had a Pillar 2 test, and only 30% of these have S-gene data. The results of all studies may therefore not be representative of the total population.
+
+ TheincreasedtransmissibilityofVOCB.1.1.7comparedtonon-VOCvariants might lead to differences in the context in which cases are occurring. For example, if institutional outbreaks are more likely with B1.1.7 compared to non-VOC, then an age matched analysis might be comparing frail elderly people in nursing home outbreaks of B.1.1.7 with healthier elderly people infected with the non-VOC virus in the community. However, both the Imperial and the LSHTM analyses showed increased CFRs across all age groups. This potential bias could therefore not explain the increased CFR in younger age groups.
+
+Data return from CO-CIN is currently reduced and unevenly distributed, which will impact on the representativeness of findings. Importantly there are a substantial number of outcomes missing from cases admitted in late December, when the impact of VOC emergence would start to be apparent in hospital data.
+
 TODO: Compare to lshtm + exeters + imperials case control and survival analysis of case fatality rate.
 TODO: Compare to other studies looking at hospitalisation rate + hospitalisation fataility rate.
 
