@@ -34,55 +34,52 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 ```{r load-data}
 lagged_severity_data <- readRDS(here("data", "lagged_severity_data.rds"))
 effects <- readRDS(here("data", "severity_sgtf_effect.rds"))
-```
 
-```{r effects}
-make_effects_table <- function(effects) {
-  effects %>%
-  mutate(target = case_when(target %in% "cfr" ~ "Case-fatality ratio",
+effects <- effects %>% 
+    mutate(target = case_when(target %in% "cfr" ~ "Case-fatality ratio",
                             target %in% "chr" ~ "Case-hospitalisation ratio",
                             target %in% "hfr" ~ "Hospitalisation-fatality ratio"),
          models = case_when(models %in% "intercept" ~ "Unadjusted",
                             models %in% "loc" ~ "Location only",
                             models %in% "all" ~ "Adjusted")) %>% 
   drop_na(models) %>% 
-  pivot_wider(names_from = target, values_from = effect) %>% 
   arrange(effect_type, convolution, loc) %>% 
   mutate(convolution = as.character(convolution)) %>% 
   mutate_if(is.character, str_to_sentence) %>% 
   mutate(loc = ifelse(loc %in% "Utla", "UTLA", "NHS region"))
-}
+```
 
-present_table <- function(tbl, cap) {
-  tbl <- tbl %>%   
-  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("ratio")) 
-  
-  additive <- tbl %>% 
-    filter(`Effect type` %in% "Additive")
-  mutl <- tbl %>% 
-    filter(`Effect type` %in% "Multiplicative")
-  
-  tbl <- additive %>% 
-    add_row() %>%
-    mutate_all(~ replace_na(., "")) %>% 
-    bind_rows(mutl)
-  
-  tbl %>% 
-  group_by(`Effect type`, Method, Aggregation) %>% 
-  mutate(Aggregation = c(Aggregation[1], rep("", n() - 1)))  %>% 
-  group_by(`Effect type`, Method) %>% 
-  mutate(Method = c(Method[1], rep("", n() - 1))) %>% 
-  group_by(`Effect type`) %>% 
-  mutate(`Effect type` = c(`Effect type`[1], rep("", n() - 1))) %>% 
-  ungroup() %>% 
-  kbl(caption = cap, booktabs = TRUE) %>%
-  kable_styling() %>%
-  landscape()
-}
-
+```{r effects}
 effects_tab <- effects %>% 
   select(-effect_numeric) %>% 
-  make_effects_table()
+  pivot_wider(names_from = target, values_from = effect)
+
+present_table <- function(tbl, cap, drop_method = FALSE, wide = TRUE) {
+  tbl <- tbl %>%   
+  select(Method = convolution, Aggregation = loc, Model = models, contains("ratio")) 
+  
+  
+  tbl <- tbl %>% 
+  group_by(Method, Aggregation) %>% 
+  mutate(Aggregation = c(Aggregation[1], rep("", n() - 1)))  %>% 
+  group_by(Method) %>% 
+  mutate(Method = c(Method[1], rep("", n() - 1))) %>% 
+  ungroup()
+  
+  if (drop_method) {
+    tbl <- tbl %>% 
+      select(-Method)
+  }
+  tbl <- tbl %>% 
+  kbl(caption = cap, booktabs = TRUE) %>%
+  kable_styling()
+  
+  if (wide) {
+    tbl <- tbl %>% 
+      landscape()
+  }
+  return(tbl)
+}
 
 extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
                         method = "Global lag") {
@@ -157,7 +154,7 @@ All models were implemented using the `brms` package in `R` and the custom `stan
 
 Visual inspection of the relationship between S-gene negativity and the case-fatality ratio, case-hospitalisation ratio, and hospitalisation-fatality ratio revealed an unclear relationship at both the NHS region and UTLA level due to the large amount of variance both between areas and over time (Figure 1). However, aggregating to the NHS region level gave some indication of a relationship between an increase in the proportion of samples that were S-gene negative and an increase in negative outcomes for Covid-19 cases.
 
-```{r scatter, echo=FALSE, fig.width=10, fig.height=10, fig.cap = "Proportion with S gene dropped compared to the adjusted severity ratios each week beginning Monday the 5th of October by NHS region and upper-tier local authority (UTLA). Each point represents one NHS region or UTLA and one week, with the size of the point given by the number of PCR tests."}
+```{r scatter, echo=FALSE, fig.width=10, fig.height=10, fig.cap = "*Proportion with S gene dropped compared to the adjusted severity ratios each week beginning Monday the 5th of October by NHS region and upper-tier local authority (UTLA). Each point represents one NHS region or UTLA and one week, with the size of the point given by the number of PCR tests.*"}
 source(here("R", "plot_severity.r"))
 suppressMessages(plot_severity(lagged_severity_data, alpha = 0.4))
 ```
@@ -166,8 +163,10 @@ Using our modelling framework, we found consistent evidence of an association be
 
 The associated effect of S-gene negativity on the case-hospitalisation ratio and the hospitalisation-fatality ratio presented the same spatial patterns as for the case-fatality ratio with estimates for both being broadly consistent with those of the effect on the case-fatality ratio across models (Table 1). Across all models that at least adjusted for location specific intercepts the effect on the case-hospitalisation ratio was higher than the effect on the hospitalisation-fatality ratio. When all hypothesised confounders were accounted for we found that the minimum estimated effect on the case-hospitalisation ratio associated with SGTF was `r extract_eff("Case-hospitalisation ratio", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` when data was aggregated to the NHS region level and a local convolution was assumed. Using the same method indicated little evidence of a associated effect of SGTF on the hospitalisation-fatality ratio (`r extract_eff("Hospitalisation-fatality ratio", type = "Multiplicative", method = "Local convolution", agg = "NHS region")`). though dropping the assumption of a locally varying delay between hospitalisation and death and instead aggregating to the UTLA level increased this to `r extract_eff("Hospitalisation-fatality ratio", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`. Visual inspection supports the direction of these findings and the increased uncertainty in estimates for the effect on the hospitalisation-fatality ratio (Figure 1).
 
-```{r effects-tab, results = "asis"} 
-present_table(effects_tab, cap = "Estimated effect of S-gene negativity on severity ratios (median with 95\\% credible intervals) for the both additive and multiplicative assumptions across spatial aggregations, delay adjustment methods, and confounder adjustment. In additive models the effect can be interpreted as a direct change in the ratio related to S-gene negativity whilst in multiplicative model the effect can be interpreted as a scaling of the S-gene positive ratio. Confounders included in the adjusted model are location variability and current case/hospital admissions.")
+```{r effects-tab-mult, results = "asis"} 
+effects_tab %>% 
+  filter(effect_type %in% "Multiplicative") %>% 
+  present_table(cap = "Estimated effect of S-gene negativity on severity ratios (median with 95\\% credible intervals) assuming a multiplicative effect across spatial aggregations, delay adjustment methods, and confounder adjustment. The effect can be interpreted as a scaling of the S-gene positive ratio. Confounders included in the adjusted model are location variability and current case/hospital admissions.")
 ```
 
 # Discussion
@@ -186,5 +185,10 @@ Population-level surveillance data supports findings from other studies using in
 
 # Supplementary information
 
+```{r effects-tab-additive, results = "asis"} 
+effects_tab %>% 
+  filter(effect_type %in% "Additive") %>% 
+  present_table(cap = NULL, drop_method = TRUE, wide = FALSE)
+```
 
-
+*Supplementary Table 1: Estimated effect of S-gene negativity on severity ratios (median with 95% credible intervals) assuming an additive effect using the fixed delay method across spatial aggregations, and confounder adjustment. The effect can be interpreted as a direct change in the ratio related to S-gene negativity. Confounders included in the adjusted model are location variability and current case/hospital admissions.*
