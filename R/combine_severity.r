@@ -9,10 +9,26 @@ library(brms)
 convolution_severity <-  readRDS(here("output", "convolution_severity.rds")) %>% 
   mutate(effect_type = "multiplicative",
          convolution = case_when(conv %in% "fixed" ~ "global convolution",
-                                 conv %in% "loc" ~ "local convolution"))
+                                 conv %in% "loc" ~ "local convolution")) %>% 
+  mutate(variant_effect_q = map(fit, function(x) {
+    samples <- posterior_samples(x, "b_prop_sgtf")
+    q <- samples[, "b_prop_sgtf"]
+    q <- exp(q)
+    q <- quantile(q, c(0.025, 0.5, 0.975))
+    q <- signif(q, 3)
+    return(q)
+  }))
+
 lagged_severity <-  readRDS(here("output", "lagged_severity.rds")) %>% 
   mutate(convolution = "global lag", 
-         effect_type = ifelse(effect_type %in% "mutliplicative", "multiplicative", effect_type))
+         effect_type = ifelse(effect_type %in% "mutliplicative", "multiplicative", effect_type)) %>% 
+  mutate(variant_effect_q = map(fit, function(x) {
+    samples <- posterior_samples(x, "alpha")
+    q <- samples[, "alpha"]
+    q <- quantile(q, c(0.025, 0.5, 0.975))
+    q <- signif(q, 3)
+    return(q)
+  }))
 
 # Score lagged models -----------------------------------------------------
 lagged_score <- lagged_severity %>% 

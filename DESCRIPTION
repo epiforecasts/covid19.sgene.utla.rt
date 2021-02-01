@@ -22,7 +22,9 @@ Imports: here,
   janitor,
   tibble,
   parallel,
-  covidregionaldata
+  covidregionaldata,
+  lemon, 
+  forcasts
 Remotes:
   epiforecasts/covidregionaldata,
 Description: Local area reproduction numbers and S-gene target failure.
