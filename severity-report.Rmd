@@ -143,7 +143,7 @@ We assumed that the observed number of Covid-19 admissions/deaths ($D_{i,t}$) by
 
 $$D_{i,t} \sim \mathrm{NB}\left(c_i\sum_{\tau = 0}^{30} \xi_{i}(t-\tau | \mu, \sigma) C_{i, t-\tau},  \phi \right)$$
 
-where $i$ indicates UTLA or NHS region, $t$ day on which a specimen was taken, $\xi_{i}(t-\tau|\mu, \sigma)$ is the probability mass function of a dsscretised log-normal distribution and may be either estimated across all locations or estimated by location, and $\tau$ indexes days prior to $t$. As for the fixed lag approach  $\phi$ is the overdispersion of admissions/deaths. $c_{i,t}$ is the location and time specific case-fatality ratio (or hospitalisation-fatality ratio / case-hospitalisation ratio, respectively) and is estimated using,
+where $i$ indicates UTLA or NHS region, $t$ day on which a specimen was taken, $\xi_{i}(t-\tau|\mu, \sigma)$ is the probability mass function of a discretised log-normal distribution and may be either estimated across all locations or estimated by location, and $\tau$ indexes days prior to $t$. As for the fixed lag approach  $\phi$ is the overdispersion of admissions/deaths. $c_{i,t}$ is the location and time specific case-fatality ratio (or hospitalisation-fatality ratio / case-hospitalisation ratio, respectively) and is estimated using,
 
 $$c_{i,t} = \mathrm{logit}^{-1}\left(\alpha f_{it} + \beta C_{i,t}+ \gamma_{i}\right)$$
 
