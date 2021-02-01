@@ -55,7 +55,7 @@ make_effects_table <- function(effects) {
 
 present_table <- function(tbl, cap) {
   tbl <- tbl %>%   
-  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("rate")) 
+  select(`Effect type` = effect_type, Method = convolution, Aggregation = loc, Model = models, contains("ratio")) 
   
   additive <- tbl %>% 
     filter(`Effect type` %in% "Additive")
@@ -80,7 +80,9 @@ present_table <- function(tbl, cap) {
   landscape()
 }
 
-effects_tab <- make_effects_table(effects)
+effects_tab <- effects %>% 
+  select(-effect_numeric) %>% 
+  make_effects_table()
 
 extract_eff <- function(target, df = effects_tab, type = "Multiplicative", model = "Adjusted", agg = "UTLA",
                         method = "Global lag") {
@@ -181,6 +183,8 @@ Population-level surveillance data supports findings from other studies using in
 # References
 
 <div id = 'refs'></div>
+
+# Supplementary information
 
 
 
