@@ -69,15 +69,15 @@ saveRDS(lagged_severity_data, here("data", "lagged_severity_data.rds"))
 
 # Save baseline ratio -----------------------------------------------------
 baseline_severity_ratio <- severity %>%
-  mutate(baseline = map_chr(fit, function(x) {
+  mutate(baseline_q = map(fit, function(x) {
     samples <- posterior_samples(x, "b_Intercept")
     q <- samples[, "b_Intercept"]
     q <- exp(q)
     q <- quantile(q, c(0.025, 0.5, 0.975))
     q <- signif(q, 2)
-    q <- paste0(q[2]," (", q[1], ", ", q[3], ")")
     return(q)
-  })) %>% 
+  }),
+  baseline = map_chr(baseline_q, ~  paste0(.[2]," (", .[1], ", ", .[3], ")"))) %>% 
   select(-fit, -data, -loo) %>% 
   arrange(loc, effect_type, convolution)
 
