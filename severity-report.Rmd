@@ -9,6 +9,7 @@ header-includes:
    - \usepackage{float}
 output:
     pdf_document
+always_allow_html: true
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE, include = FALSE}
