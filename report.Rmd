@@ -26,6 +26,7 @@ library(gt)
 library(lubridate)
 library(loo)
 library(covidregionaldata)
+library(tidybayes)
 
 utla_rt <- readRDS(here("data", "utla_rt_with_covariates.rds"))
 
@@ -227,7 +228,7 @@ ggplot2::ggplot(effects, aes(x = variable, y = median,
   ggplot2::theme(legend.position = "none")
 
 intercept <- long %>%
-  spread_draws(b_Intercept ) %>%
+  tidybayes::spread_draws(b_Intercept) %>%
   tidybayes::median_qi(.width = c(.95)) %>%
   tidyr::pivot_longer(c(b_Intercept, .lower, .upper)) %>%
   dplyr::mutate(value = exp(value)) %>%
