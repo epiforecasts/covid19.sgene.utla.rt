@@ -8,7 +8,7 @@ csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa
 header-includes:
    - \usepackage{float}
 output:
-    pdf_document
+    word_document
 always_allow_html: true
 ---
 
