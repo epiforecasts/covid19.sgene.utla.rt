@@ -8,7 +8,7 @@ csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa
 header-includes:
    - \usepackage{float}
 output:
-    word_document
+    pdf_document
 always_allow_html: true
 ---
 
@@ -162,7 +162,7 @@ All models were implemented using the `brms` package in `R` and the custom `stan
 
 Visual inspection of the relationship between S-gene negativity and the case-fatality ratio, case-hospitalisation ratio, and hospitalisation-fatality ratio revealed an unclear relationship at both the NHS region and UTLA level due to the large amount of variance both between areas and over time (Figure 1). However, aggregating to the NHS region level gave some indication of a relationship between an increase in the proportion of samples that were S-gene negative and an increase in negative outcomes for Covid-19 cases.
 
-```{r scatter, echo=FALSE, fig.width=8, fig.height=8}
+```{r scatter, echo=FALSE, fig.width=9, fig.height=9}
 source(here("R", "plot_severity.r"))
 suppressMessages(plot_severity(lagged_severity_data, alpha = 0.4))
 ```
@@ -176,7 +176,7 @@ Using our modelling framework, we found consistent evidence of an association be
 The associated effect of S-gene negativity on the case-hospitalisation ratio and the hospitalisation-fatality ratio presented the same spatial patterns as for the case-fatality ratio with estimates for both being broadly consistent with those of the effect on the case-fatality ratio across models (Figure 2, Table 1, and Supplementary Table 1). Across all models that at least adjusted for location specific intercepts the effect on the case-hospitalisation ratio was higher than the effect on the hospitalisation-fatality ratio. When all hypothesised confounders were accounted for we found that the minimum estimated effect on the case-hospitalisation ratio associated with SGTF was `r extract_eff("Case-hospitalisation ratio", type = "Multiplicative", method = "Local convolution", agg = "NHS region")` when data was aggregated to the NHS region level and a local convolution was assumed. Using the same method indicated little evidence of a associated effect of SGTF on the hospitalisation-fatality ratio (`r extract_eff("Hospitalisation-fatality ratio", type = "Multiplicative", method = "Local convolution", agg = "NHS region")`). though dropping the assumption of a locally varying delay between hospitalisation and death and instead aggregating to the UTLA level increased this to `r extract_eff("Hospitalisation-fatality ratio", type = "Multiplicative", method = "Global convolution", agg = "UTLA")`. Visual inspection supports the direction of these findings and the increased uncertainty in estimates for the effect on the hospitalisation-fatality ratio (Figure 1 and Figure 2).
 
 
-```{r plot-effects, echo=FALSE, fig.width=8, fig.height=8}
+```{r plot-effects, echo=FALSE, fig.width=9, fig.height=9}
 plot_effect <- function(df, effect_lab = "Effect of S-gene negativity") {
   df %>% 
   filter(effect_type %in% "Multiplicative") %>% 
@@ -229,7 +229,7 @@ Population-level surveillance data supports findings from other studies using in
 
 # Supplementary information
 
-```{r plot-baseline, echo=FALSE, fig.width=8, fig.height=8}
+```{r plot-baseline, echo=FALSE, fig.width=9, fig.height=9}
 baseline %>% 
   filter(effect_type %in% "Multiplicative") %>% 
   mutate(effect_numeric = baseline_q) %>% 
