@@ -20,27 +20,26 @@ g_sd <- 3.08
 k <- round((g_sd / g_mean)^2, 2)
 
 # Define priors -----------------------------------------------------------
-priors <- prior(constant(0), nlpar = "afk") +
-  prior(constant(0), nlpar = "afG") +
-  prior(constant(0), nlpar = "afr") +
-  prior(student_t(3, 0, 0.25), nlpar = "rp") +
-  set_prior(paste0("constant(", k, ")"), nlpar = "kp") +
-  set_prior(paste0("constant(", g_mean, ")"), nlpar = "Gp")
+priors <- prior(constant(0), nlpar = "mG", coef = "Intercept") +
+  prior(normal(0, 0.5), nlpar = "mG") +
+  prior(normal(0, 0.1), nlpar = "r") +
+  set_prior(paste0("constant(", k, ")"), nlpar = "k", coef = "Intercept") +
+  set_prior(paste0("constant(", g_mean, ")"), nlpar = "G", coef = "Intercept")
 
 # Define non-linear model -------------------------------------------------
 nl_model <- as.formula(
-  rt_mean ~ (1 + ((1 + afk) * kp) * ((1 + afr) * rp) * ((1 + afG) * Gp))^(1/((1 + afk) * kp))
+  rt_mean ~ pow(1 + (k * r * (exp(mG) * G)), 1 / k)
   )
 
-# Define parameters for model
+# Define model structure
 form <- bf(nl_model,
-           rp ~ 1,
-           kp ~ 1,
-           Gp ~ 1,
-           afk ~ 1,
-           afG ~ 1,
-           afr ~ 1, 
+           r ~ 1, 
+           k ~ 1,
+           G ~ 1,
+           mG ~ 1,
            nl = TRUE)
 
 fit <- brm(formula = form, family = gaussian(), 
            data = utla_rt_with_covariates, prior = priors)
+
+print(fit, digits = 3)
