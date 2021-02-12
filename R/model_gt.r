@@ -16,27 +16,17 @@ utla_rt_with_covariates <-
 
 
 # Add custom functions ----------------------------------------------------
-priors <- c(prior(gamma(2, 0.1), class = nu),
-            prior(lognormal(0, 1), class = alpha),
-            prior(student_t(3, 0, 0.5), class = sigma))
-
-form <- bf(rt_mean ~ pow((1 + k * r * G), (1/k)),
-           k ~ (1 + afk) * kp,
-           r ~ (1 + afr) * rp,
-           G ~ (1 + afG) * Gp,
+form <- bf(rt_mean ~ (1 + ((1 + afk) * kp) * ((1 + afr) * rp) * ((1 + afG) * Gp))^(1/((1 + afk) * kp)),
            rp ~ 1,
-           Gp ~ 1,
            kp ~ 1,
+           Gp ~ 1,
            afk ~ 1,
            afG ~ 1,
            afr ~ 1, 
            nl = TRUE)
 
-form <- bf(rt_mean_log ~ 1 + k * r * G, 
-           k + r + G ~ 1, nl = FALSE)
-
-fit <- make_stancode(form, 
-                     family = gaussian(), data = utla_rt_with_covariates)
+fit <- make_stancode(formula = form, family = gaussian(), 
+           data = utla_rt_with_covariates)
 
 # Add custom family -------------------------------------------------------
 stan_funs <- "
