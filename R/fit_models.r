@@ -50,30 +50,39 @@ base_model <- function(form, iter = 2000, ...) {
 
 # Fit models --------------------------------------------------------------
 fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
-                       type = c("static", "dynamic")) {
+                       type = c("static", "dynamic"),
+                       static_weeks = 1) {
   # filter for target
   dynamic_data <- data %>%
     rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
     filter(!is.na(rt_mean))
-  static_data <- dynamic_data %>%
-    filter(week_infection == max(week_infection))
+  static_data <-
+    lapply(seq_len(static_weeks),
+           function(x) {
+             dynamic_data %>%
+               filter(week_infection == (max(week_infection) - (x - 1) * 7))
+           })
 
   ##Static model ------------------------------------------------------------
   # set model settings and priors
-  static_model <- function(form, ...) {
-    base_model(form = form, data = static_data,
+  static_model <- function(form, i, ...) {
+    base_model(form = form, data = static_data[[i]],
                control = list(adapt_delta = 0.95),
                ...)
   }
   # fit models
   static <- list()
   if ("static" %in% type) {
-    static[["intercept"]] <- static_model(rt_mean | vreal(prop_sgtf) ~ 1,
-                                          prior = priors)
+    static[["intercept"]] <-
+      lapply(seq_len(static_weeks), function(i) {
+        static_model(rt_mean | vreal(prop_sgtf) ~ 1, i, prior = priors)
+      })
     static[["region"]] <-
-      static_model(rt_mean | vreal(prop_sgtf) ~ nhser_name,
-                   prior = c(priors,
-                             prior(student_t(3, 0, 0.5), class = "b")))
+      lapply(seq_len(static_weeks), function(i) {
+        static_model(rt_mean | vreal(prop_sgtf) ~ nhser_name, i,
+                     prior = c(priors,
+                               prior(student_t(3, 0, 0.5), class = "b")))
+      })
   }
 
   # Dynamic model -----------------------------------------------------------
@@ -160,6 +169,8 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
     } else {
       dynamic <- lapply(dynamic_models, dynamic_model)
     }
+  } else {
+    dynamic <- list()
   }
 
   return(list(models = list(static = static, dynamic = dynamic),
@@ -167,10 +178,11 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
 }
 
 # fit models
-gt <- c("long")
+gt <- c("short", "long")
 res <- lapply(gt, fit_models,
               data = utla_rt_with_covariates,
-              type = "dynamic")
+              type = "static",
+              static_weeks = 4)
 names(res) <- gt
 
 # Save fits ---------------------------------------------------------------
