@@ -5,9 +5,14 @@ library(dplyr)
 library(here)
 library(lubridate)
 library(readr)
+library(magrittr)
 
 # Download Rt estimates ---------------------------------------------------
-week_start <- 1
+week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+  .$week_infection %>%
+  subtract(7) %>%
+  max() %>%
+  wday()
 
 # extract from epiforecasts.io/covid
 rt_estimates <-
@@ -30,7 +35,8 @@ rt <- short_rt %>%
 
 # Make Rt weekly
 rt_weekly <- rt %>%
-  mutate(week_infection = floor_date(date, "week", week_start = week_start)) %>%
+  mutate(week_infection =
+           floor_date(date, "week", week_start = week_start) + 6) %>%
   group_by(utla_name, week_infection, generation_time) %>%
   summarise(mean = mean(mean), sd = mean(sd), n = n(), .groups = "drop") %>%
   filter(n == 7) %>%
