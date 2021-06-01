@@ -4,6 +4,14 @@ library(tidyr)
 library(dplyr)
 library(here)
 library(lubridate)
+library(covidregionaldata)
+library(magrittr)
+
+week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+  .$week_infection %>%
+  subtract(7) %>%
+  max() %>%
+  wday()
 
 # Load data ---------------------------------------------------------------
 rt_weekly <- readRDS(here("data", "rt_weekly.rds"))
@@ -21,7 +29,23 @@ utla_rt <- sgene_by_utla %>%
 tiers <- tiers %>%
 	complete(week_infection = unique(utla_rt$week_infection),
 		 utla_name = unique(utla_name)) %>%
-	replace_na(list(tier = "none"))
+	replace_na(list(tier = "none")) %>%
+	arrange(utla_name, week_infection)
+
+cases <- get_regional_data("UK", level = "2") %>%
+  filter(date >= min(utla_rt$week_infection) + 7) %>%
+  mutate(week_infection = floor_date(date, "week", week_start) + 6 - 7) %>%
+  group_by(week_infection, utla_name = authority) %>%
+  summarise(cases = sum(cases_new, na.rm = TRUE), .groups = "drop")
+
+cases_last_4_weeks <- utla_rt %>%
+  inner_join(cases, by = c("utla_name", "week_infection")) %>%
+  filter(week_infection > max(week_infection) - 28) %>%
+  group_by(utla_name, nhser_name) %>%
+  summarise(new_samples = sum(samples),
+            new_cases = sum(cases),
+            .groups = "drop") %>%
+  mutate(sampling = new_samples / new_cases)
 
 cases <- get_regional_data("UK", level = "2") %>%
   filter(date >= min(utla_rt$week_infection) + 7) %>%
