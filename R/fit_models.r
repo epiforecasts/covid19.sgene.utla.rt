@@ -11,7 +11,9 @@ options(mc.cores = detectCores())
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
-  mutate(tier = if_else(tier == "none", "_none", tier))
+  mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier)) %>%
+  filter(sampling >= 0.2, samples >= 20) %>%
+  mutate(prop_sgtf = 1 - prop_sgtf)
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -54,8 +56,8 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
                        static_weeks = 1) {
   # filter for target
   dynamic_data <- data %>%
-    rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
-    filter(!is.na(rt_mean))
+     rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
+     filter(!is.na(rt_mean))
   static_data <-
     lapply(seq_len(static_weeks),
            function(x) {
@@ -104,73 +106,62 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
 
       dynamic_models[["interventions"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_random"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_region"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier + nhser_name +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_random_region"]] <-
       as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
-        nhser_name + retail_and_recreation + grocery_and_pharmacy +
-        parks + transit_stations + workplaces + residential)
+        nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_time_region"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
-                     nhser_name + retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+                     nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_time_region_random"]] <-
       as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
         (1 | utla_name) + nhser_name +
-        retail_and_recreation + grocery_and_pharmacy +
-        parks + transit_stations + workplaces + residential)
+        retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_time_by_region"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
           s(time, k = 9, by = nhser_name) +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_time_by_random_region"]] <-
       as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
         s(time, k = 9, by = nhser_name) +
         (1 | utla_name) +
-        retail_and_recreation + grocery_and_pharmacy +
-        parks + transit_stations + workplaces + residential)
+        retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_independent_time_region"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_independent_time_random_region"]] <-
         as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
           (1 | utla_name) +
-          retail_and_recreation + grocery_and_pharmacy +
-          parks + transit_stations + workplaces + residential)
+          retail_and_recreation + transit_stations + workplaces + residential)
     }
 
-    if (parallel) {
-      dynamic <- parallel::mclapply(dynamic_models, dynamic_model)
-    } else {
-      dynamic <- lapply(dynamic_models, dynamic_model)
-    }
+  }
+
+  if (parallel) {
+    dynamic <- parallel::mclapply(dynamic_models, dynamic_model)
   } else {
-    dynamic <- list()
+    dynamic <- lapply(dynamic_models, dynamic_model)
   }
 
   return(list(models = list(static = static, dynamic = dynamic),
@@ -181,7 +172,7 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
 gt <- c("short", "long")
 res <- lapply(gt, fit_models,
               data = utla_rt_with_covariates,
-              type = "static",
+              type = c("static", "dynamic"),
               static_weeks = 4)
 names(res) <- gt
 
@@ -194,3 +185,15 @@ save_results <- function(name) {
           here::here("output", paste0("sgene_fits_", name, "_gt.rds")))
 }
 lapply(gt, save_results)
+
+## weeks_infection <- max(utla_rt_with_covariates$week_infection) - (seq_len(4) - 1) * 7
+
+## samples <- lapply(names(res$long$model$static), function(model) { lapply(seq_along(res$long$model$static[[model]]), function(i) posterior_samples(res$long$model$static[[model]][[i]]) %>% as_tibble() %>% mutate(model=model, i=i))}) %>% bind_rows()
+
+## samples %>% mutate(week = max(utla_rt_with_covariates$week_infection) - (i - 1) * 7) %>% group_by(model, week) %>% summarise(low = quantile(alpha, 0.05), high = quantile(alpha, 0.95), .groups = "drop")
+
+## samples <- lapply(names(res$short$model$static), function(model) { lapply(seq_along(res$short$model$static[[model]]), function(i) posterior_samples(res$short$model$static[[model]][[i]]) %>% as_tibble() %>% mutate(model=model, i=i))}) %>% bind_rows()
+
+## samples %>% mutate(week = max(utla_rt_with_covariates$week_infection) - (i - 1) * 7) %>% group_by(model, week) %>% summarise(low = quantile(alpha, 0.05), high = quantile(alpha, 0.95), .groups = "drop")
+
+
