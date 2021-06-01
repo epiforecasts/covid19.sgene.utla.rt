@@ -41,6 +41,7 @@ get_notifications_data <- function(from = c("cases", "admissions", "deaths"),
   # get variant proportion
   sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>% 
     drop_na(prop_sgtf) %>% 
+    mutate(prop_sgtf = 1 - prop_sgtf) %>%
     mutate(week_specimen = week_infection + 7) %>% 
     filter(week_specimen > "2020-10-01") %>% 
     group_by(utla_name,week_specimen) %>% 
