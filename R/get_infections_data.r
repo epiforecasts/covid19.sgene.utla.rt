@@ -91,6 +91,7 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   ## get variant proportion
   sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds")) %>%
     drop_na(prop_sgtf) %>%
+    mutate(prop_sgtf = 1 - prop_sgtf) %>%
     filter(week_infection > "2020-10-01")
   
   week_start <- lubridate::wday(max(sgene_by_utla$week_infection)) - 1
@@ -110,8 +111,7 @@ get_infections_data <- function(from = c("cases", "admissions", "deaths"),
   ## link with variant proportion
   deaths_with_cov <- weekly_infections %>%
     inner_join(sgene_by_utla, by = c("week_infection", "utla_name")) %>%
-    rename(utla = utla_name, region = nhser_name) %>%
-    select(-utla_code)
+    rename(utla = utla_name, region = nhser_name)
   
   ## factorise time
   deaths_with_cov <- deaths_with_cov %>%
