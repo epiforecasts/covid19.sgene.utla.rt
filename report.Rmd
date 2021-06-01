@@ -27,12 +27,19 @@ library(lubridate)
 library(loo)
 library(covidregionaldata)
 library(tidybayes)
+library(magrittr)
 
 utla_rt <- readRDS(here("data", "utla_rt_with_covariates.rds"))
 
-cases <- get_regional_data("UK", include_level_2_regions = TRUE) %>%
+week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+  .$week_infection %>%
+  subtract(7) %>%
+  max() %>%
+  wday()
+
+cases <- get_regional_data("UK", level = "2") %>%
   filter(date >= min(utla_rt$week_infection) + 7) %>%
-  mutate(week_infection = floor_date(date, "week", 1) - 7) %>%
+  mutate(week_infection = floor_date(date, "week", week_start)  + 6 - 7) %>%
   group_by(week_infection, utla_name = authority) %>%
   summarise(cases = sum(cases_new, na.rm = TRUE), .groups = "drop")
 
