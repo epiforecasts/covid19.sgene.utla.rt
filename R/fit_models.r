@@ -12,7 +12,6 @@ utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
   mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier)) %>%
-  filter(sampling >= 0.2, samples >= 20) %>%
   mutate(prop_sgtf = 1 - prop_sgtf)
 
 # Add custom family -------------------------------------------------------
@@ -173,7 +172,7 @@ gt <- c("short", "long")
 res <- lapply(gt, fit_models,
               data = utla_rt_with_covariates,
               type = c("static", "dynamic"),
-              static_weeks = 4)
+              static_weeks = 6)
 names(res) <- gt
 
 # Save fits ---------------------------------------------------------------
@@ -185,15 +184,4 @@ save_results <- function(name) {
           here::here("output", paste0("sgene_fits_", name, "_gt.rds")))
 }
 lapply(gt, save_results)
-
-## weeks_infection <- max(utla_rt_with_covariates$week_infection) - (seq_len(4) - 1) * 7
-
-## samples <- lapply(names(res$long$model$static), function(model) { lapply(seq_along(res$long$model$static[[model]]), function(i) posterior_samples(res$long$model$static[[model]][[i]]) %>% as_tibble() %>% mutate(model=model, i=i))}) %>% bind_rows()
-
-## samples %>% mutate(week = max(utla_rt_with_covariates$week_infection) - (i - 1) * 7) %>% group_by(model, week) %>% summarise(low = quantile(alpha, 0.05), high = quantile(alpha, 0.95), .groups = "drop")
-
-## samples <- lapply(names(res$short$model$static), function(model) { lapply(seq_along(res$short$model$static[[model]]), function(i) posterior_samples(res$short$model$static[[model]][[i]]) %>% as_tibble() %>% mutate(model=model, i=i))}) %>% bind_rows()
-
-## samples %>% mutate(week = max(utla_rt_with_covariates$week_infection) - (i - 1) * 7) %>% group_by(model, week) %>% summarise(low = quantile(alpha, 0.05), high = quantile(alpha, 0.95), .groups = "drop")
-
 

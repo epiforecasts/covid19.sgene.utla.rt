@@ -61,19 +61,19 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 **Background:** Local estimates of the time-varying effective reproduction number (Rt) of Covid-19 in England have become increasingly heterogeneous in England in the past few weeks. This variation may be attributed to the spread of novel Covid-19 variant "delta". In this report we aimed to investigate the changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant variant "alpha", and to correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
 
-**Method:** We explored the relationship between the proportion of samples that were S-gene negative and the effective reproduction number of test positive cases over time. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean R. Models were compared using the expected log-predictive density.
+**Method:** We explored the relationship between the proportion of samples that were S-gene negative and the effective reproduction number of test positive cases over time. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean R. Models were compared using the expected log-predictive density. Results are shown as 95% credible intervals.
 
 **Results:** We found evidence of an association between increased mean Rt and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better and yielded consistent results of the association of Rt with S-gene posistivity.
 
 **Conclusions:** Our results indicate that even after adjusting for between NHS region residual variation over time S-gene positivity was associated with an increase in the effective reproduction number of Covid-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number will remain above 1 at current levels of restrictions.
 
-**Limitations:** Associations are purely observational and therefore subject to bias due to confounders not included in the model. Surge testing and infections brought in by travellers may have affected the case numbers and, consequently, reproduction number estimates. Our analysis does not distinguish between increased reproduction numbers due to transmission advantage and transmission advantage due to vaccine escape and therefore cannot distinguish between the two.
+**Limitations:** Associations are purely observational and therefore subject to bias due to confounders not included in the model. Surge testing and infections brought in by travellers may have affected the case numbers and, consequently, reproduction number estimates. Our analysis does not distinguish between increased reproduction numbers due to transmission advantage and transmission advantage due to vaccine escape and therefore cannot distinguish between the two. Whilst we did investigate two different generation interval distributions we did not consider a scenario where the generation times were different between S-gene positives and negatives.
 
 # Method
 
 ## Data
 
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority provided by Public Health England (PHE)[@phe], Google mobility data stratified by context [@google], and data on the timings of natioanl easing. We aggregated the data at the weekly level and restricted the analysis to the period beginning `r format(min(utla_rt$week_infection), "%A, %d %B")`.
+We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority provided by Public Health England (PHE), Google mobility data stratified by context [@google], and data on the timings of national easing. We aggregated the data at the weekly level and restricted the analysis to the period beginning `r format(min(utla_rt$week_infection), "%A, %d %B")`.
 
 ## Statistical analysis
 
@@ -90,24 +90,36 @@ cat(sep = "",
 ```
 
 $$ R_{i,t} = \left(1 + \alpha f_{it}\right) \exp{\left( s(t) + \sum_j \beta_{j} T_{ijt} + \sum_k \gamma_{k} G_{ikt} + \log R_i \right)} $$
-where $R_t$ is an UTLA-level intercept corresponding to Rt during national lockdown in November, $T_{ijt}$ is 1 if intervention $j$ (out of: January lockdown, reopening phase 1/2) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, workplace, public transport) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). We lastly fitted the model for each $t$ separately, i.e. at fixed time slices ("Time-sliced").
+where $R_t$ is an UTLA-level intercept corresponding to Rt during national lockdown in February/March, $T_{ijt}$ is 1 if intervention $j$ (out of: January lockdown, reopening phase 1/2) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, workplace, public transport) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). We lastly fitted the model for each $t$ separately, i.e. at fixed time slices ("Time-sliced").
 
-The key parameter is $\alpha$, the relative change in reproduction number in the presence of s-gene positivity that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested positive, and the reproduction number in any given UTLA is
+The key parameter is $\alpha$, the relative change in reproduction number in the presence of s-gene positivity that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested negative, and the reproduction number in any given UTLA is
 $$ R_{t, i} = (1 - f_{it}) R^+_{t, i} +  f_{it} R^-_{t, i}$$
-where $R^-_{t, i}$ is the S-gene negative reproduction number, $R^+_{t, i}$ is the S-gene positive reproduction number, and it is assumed that $R^-_{t, i} = (1 + \alpha) R^+_{t, i}$. 
+where $R^-_{t, i}$ is the S-gene negative reproduction number, $R^+_{t, i}$ is the S-gene positive reproduction number, and it is assumed that $R^+_{t, i} = (1 + \alpha) R^-_{t, i}$. 
 
-We used a Student's t-distribution observation model with a single variance parameter and a single degrees of freedom parameter. We restricted the analysis to UTLA/week combinatoins where more than 20% of reported cases and more than 20 in total had an S-gene status reported. All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/) (`may-update` branch).
+We used a Student's t-distribution observation model with a single variance parameter and a single degrees of freedom parameter. We restricted the analysis to UTLA/week combinations where more than 20% of reported cases and more than 20 in total had an S-gene status reported. All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/) (`may-update` branch).
 
 # Results
 
 
-```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10}
+```{r echo = FALSE}
+fig1_cap <- 
+  paste0("*Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
+         format(min(utla_rt$week_infection), "%d %B, %Y"),
+         ", compared to the proportion of all test-positives tested for S-gene",
+         " that tested S-gene positive/negative that week. Each point",
+         " represents one UTLA, with the size given by the number of cases in the week",
+         " following the week of the given reproduction number to account for the delay",
+         " from infection to testing. Only UTLAs with sufficient coverage of S-gene results ",
+         " at least 20% of cases tested and at least 20 results in total)*")
+```
+
+```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10, fig.cap=fig1_cap}
 plot_rt <- function(rt_data) {
   ggplot(rt_data, aes(x = prop_sgtf, y = rt_mean,
                       fill = nhser_name, size = cases)) +
   geom_jitter(pch = 21) +
   facet_wrap(. ~ week_infection) +
-  scale_fill_brewer("", palette = "Set1") +
+  scale_fill_brewer("", palette = "Set1", drop = FALSE) +
   xlab("Proportion SGTF") +
   ylab("Mean reproduction number") +
   theme_cowplot() +
@@ -118,17 +130,6 @@ plot_rt <- function(rt_data) {
         legend.box = "vertical")
 }
 suppressWarnings(plot_rt(long_rt))
-```
-
-```{r results='asis', echo = FALSE}
-cat(sep = "",
-    "*Figure 1: Mean reproduction numbers using a generation time with a mean of 5.5 days since the week beginning ",
-    format(min(utla_rt$week_infection), "%d %B, %Y"),
-    ", compared to the proportion of all test-positives tested for S-gene",
-    " that tested S-gene positive/negative that week. Each point",
-    " represents one UTLA, with the size given by the number of cases in the week",
-    " following the week of the given reproduction number to account for the delay",
-    " from infection to testing.*")
 ```
 
 ```{r load-models, echo = FALSE}
@@ -147,7 +148,12 @@ effect_size <- function(gt, model, pos = 2) {
 }
 ```
 
-```{r time-sliced, echo = FALSE}
+```{r fig2_cap, echo = FALSE}
+fig2_cap <-
+  "*Estimates of $\\alpha$ from the time-sliced model.*"
+```
+
+```{r time-sliced, echo = FALSE, fig.cap = fig2_cap}
 estimates <- list()
 for (gg in c("short", "long")) {
   samples <- lapply(names(fits[[gg]]$models$static), function(model) {
@@ -168,33 +174,33 @@ for (gg in c("short", "long")) {
 }
 
 estimates <- bind_rows(estimates, .id = "gt") %>%
+  filter(week != max(week)) %>%
   mutate(model = stringi::stri_trans_totitle(model),
-         gt_exact = if_else(gt == "short", 3.5, 5.5),
+         gt_exact = if_else(gt == "short", 3.6, 5.5),
          gt = paste0(stringi::stri_trans_totitle(gt),
                      " generation time (mean ",
                      gt_exact, " days)")) %>%
   rename(Model = model)
 
-ggplot(estimates, aes(x = week, ymin = low, ymax = high, colour = Model)) +
+ggplot(estimates, aes(x = week, ymin = low - 1, ymax = high - 1, colour = Model)) +
   geom_linerange(position = position_dodge(width = 0.5)) +
   facet_wrap(~ gt, ncol = 1) +
   theme_minimal() +
   theme(legend.position = "bottom") +
   scale_colour_brewer(palette = "Dark2") +
   xlab("") +
-  ylab("Estimated ratio R S+/S-") +
+  ylab(expression(alpha)) +
   expand_limits(y = 1)
 ```
-*Figure 2: Estimates of the ratio between R for S-gene positive vs. S-gene negative infections from the time-sliced model.*
 
-We found consistent evidence of an association between S-gene positivity and increased UTLA level reproduction number estimates. The association became more apparent over time. The outer 90% credible intervals of the estimates in the time-sliced analysis (Fig. 2) ranged from a `r round((min(estimates$low) - 1) * 100 )`% increase to a `r round((max(estimates$high) - 1) * 100 )`% increase, in April/May, depending on the assumption about generation times and the model used, as the proportion of of tests that were S-gene positive increased heterogeneously across NHS regions. Out of the models fitted to all time, ones that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not but all models had evidence of increased Rt with S-gene positivity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` higher Rt of S-gene positive cases with a short generation time (Table 1), slightly higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("long","interventions_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and `r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in Rt varied from `r effect_size("short","interventions_time_by_random_region", 3)` to `r effect_size("long","interventions_random_region", 3)` in models that fit the data comparably (but had different assumed generation times).
+We found consistent evidence of an association between S-gene positivity and increased UTLA level reproduction number estimates. The association became more apparent over time. The outer 90% credible intervals of the estimates in the time-sliced analysis (Fig. 2) ranged from a `r round((min(estimates$low) - 1) * 100 )`% increase to a `r round((max(estimates$high) - 1) * 100 )`% increase, in April/May, depending on the assumption about generation times and the model used, as the proportion of of tests that were S-gene positive increased heterogeneously across NHS regions. Out of the models fitted to all time, ones that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not but all models had evidence of increased Rt with S-gene positivity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` higher Rt of S-gene positive cases with a short generation time (Table 1), higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("short","interventions_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and `r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in Rt varied from `r effect_size("short","interventions_time_by_random_region", 3)` to `r effect_size("long","interventions_random_region", 3)` in models that fit the data comparably (but had different assumed generation times).
 
 The best fitting model appeared to reproduce estimated reproduction numbers well over time (Fig. 3) although there are notable outliers in some of the weeks. Alternative model parametrisations fit the data less well than those presented here whilst producing comparable effect size estimates.
 
 ```{r regression_coeffs, echo = FALSE}
 st <- lapply(models,  function(x) {
   lapply(x$post, function(y) {
-    paste0(y[2],  " (",  y[1],  "-",  y[3],  ")")
+    paste0(y[1],  "--",  y[3])
   })
 })
 
@@ -214,6 +220,10 @@ full_models <-
 <!-- ``` -->
 <!-- *Table 1: Model comparison (long generation interval) by difference in expected log-predictive density.* -->
 
+```{r tab1_cap, echo = FALSE}
+tab1_cap <- 
+  "\\emph{Parameter $\\alpha$ with 95\\% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene positive cases}."
+```
 
 ```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
 fn <- tibble(Model = names(full_models),
@@ -221,12 +231,25 @@ fn <- tibble(Model = names(full_models),
              `Estimate (long GT)` = unlist(st[["long"]][full_models]))
 
 fn %>%
-  kbl() %>%
+  kbl(caption = tab1_cap) %>%
   kable_styling()
 ```
-*Table 1: Parameter $\alpha$ with 95% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene positive cases.*
 
-```{r regression_estimates, echo = FALSE, results = 'asis'}
+```{r fig3_cap, echo = FALSE}
+intercept <- long %>%
+  tidybayes::spread_draws(b_Intercept) %>%
+  tidybayes::median_qi(.width = c(.95)) %>%
+  tidyr::pivot_longer(c(b_Intercept, .lower, .upper)) %>%
+  dplyr::mutate(value = exp(value)) %>%
+  tidyr::pivot_wider()
+
+fig3_cap <-
+  paste0("*Parameter estimates (R ratios) of the Regional static model. These correspond to a multiplicative ",
+	 " effect on a baseline R of ", round(intercept$.lower, 2), "--", round(intercept$.upper, 2), 
+	 "). Intervention indicators are coloured in red, and mobility indicators in blue.*")
+```
+
+```{r regression_estimates, echo = FALSE, results = 'asis', fig.cap = fig3_cap}
 effects <- long %>%
   tidybayes::spread_draws(`b_(tier|groc|parks|trans|work|res).*`,
                           regex = TRUE) %>%
@@ -265,18 +288,14 @@ ggplot2::ggplot(effects, aes(x = variable, y = median,
   ggplot2::coord_flip() +
   ggplot2::theme_minimal() +
   ggplot2::theme(legend.position = "none")
-
-intercept <- long %>%
-  tidybayes::spread_draws(b_Intercept) %>%
-  tidybayes::median_qi(.width = c(.95)) %>%
-  tidyr::pivot_longer(c(b_Intercept, .lower, .upper)) %>%
-  dplyr::mutate(value = exp(value)) %>%
-  tidyr::pivot_wider()
 ```
 
-*Figure 3: Parameter estimates (R ratios) of the Regional static model. These correspond to a multiplicative effect on a baseline R=`r round(intercept$b_Intercept, 1)` (95% CI: `r round(intercept$.lower, 2)`--`r round(intercept$.upper, 2)`). Intervention indicators are coloured in red, and mobility indicators in blue*
+```{r fig4_cap, echo = FALSE}
+fig4_cap <-
+  "*Predictions of the regional static model with long generation interval (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*"
+```
 
-```{r fit, echo = FALSE,fig.width = 10, fig.height = 10}
+```{r fit, echo = FALSE,fig.width = 10, fig.height = 10, fig.cap = fig4_cap}
 ## calculate predicted intervals
 plot_pred_int <- function(gt, model,
                           quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
@@ -320,7 +339,6 @@ plot_pred_int <- function(gt, model,
 
 p <- plot_pred_int("long", "interventions_random_region")
 ```
-*Figure 3: Predictions of the regional static model with long generation interval (per-region spline) compared to the data (solid dots). Dark grey: central 50% prediction interval; light grey: central 90% prediction interval. Areas are ordered each week according to predicted median.*
 
 # References
 

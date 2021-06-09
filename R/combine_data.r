@@ -67,6 +67,7 @@ utla_rt_with_covariates <- utla_rt %>%
   inner_join(mobility, by = c("week_infection", "utla_name")) %>%
   inner_join(cases_last_4_weeks,
              by = c("utla_name", "nhser_name")) %>%
+  mutate(nhser_name = factor(nhser_name)) %>%
   filter(new_cases >= 100, sampling >= 0.2)
 
 saveRDS(utla_rt_with_covariates, here("data", "utla_rt_with_covariates.rds"))
