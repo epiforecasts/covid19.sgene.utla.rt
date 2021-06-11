@@ -3,7 +3,7 @@ title: "Local area reproduction numbers and S-gene positivity"
 subtitle: "Work in progress - not peer reviewed"
 author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
-date: 1 June, 2021
+date: 8 June, 2021
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
    - \usepackage{float}
