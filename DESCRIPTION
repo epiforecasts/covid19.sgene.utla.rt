@@ -24,7 +24,7 @@ Imports: here,
   parallel,
   covidregionaldata,
   lemon, 
-  forcasts
+  forecasts
 Remotes:
   epiforecasts/covidregionaldata,
 Description: Local area reproduction numbers and S-gene target failure.
