@@ -15,11 +15,26 @@ utla_rt_with_covariates <-
   mutate(sgtf_samples = as.integer(prop_sgtf * samples),
          id = 1:n(), sgtf = NA_real_)
 
-# Example non-linear model ------------------------------------------------
+# model with uncertainty ------------------------------------------------
 
 source(here("R", "variant_rt.r"))
 
-fit <- variant_rt(
+# no uncertainty on sgtf
+fit_cert <- variant_rt(
+  log_rt = ~ 1,
+  data = utla_rt_with_covariates %>%
+    rename(rt_mean = rt_mean_long_gt, rt_sd = rt_sd_long_gt)%>%
+    mutate(sgtf = prop_sgtf) %>%
+    mutate(
+      sgtf = ifelse(sgtf <= 0, 1e-5, ifelse(prop_sgtf >= 1, 0.9999, prop_sgtf))
+    ),
+  brm_fn = brm
+)
+
+summary(fit_cert)
+
+# uncertainty on sgtf
+fit_ <- variant_rt(
   log_rt = ~ 1,
   data = utla_rt_with_covariates %>%
     rename(rt_mean = rt_mean_long_gt, rt_sd = rt_sd_long_gt),

@@ -15,14 +15,15 @@
 #' @param log_rt Formula describing the covariates  predicting the log of the
 #' baseline variants time-varying reproduction number.
 #' @param data Data frame that must contain the responses: `rt_mean`,
-#' `rt_sd`, `sgtf_samples`, `samples`.
+#' `rt_sd`, `sgtf_samples`, `samples` and a dummy variable `sgtf` which 
+#' is `NA_real`. If wanting to not model uncertainty in the variant proportion
+#' fill this variable with the point estimate of the proportion.
 #' @param brm_fn Function from `brms` to apply. Common options are
 #' `brm()` for model fitting,`get_prior()` to see the priors (not may not
 #' be accurate in all cases), and `make_stancode()` to see the generated
 #' stan code.
 #' @param ... Additional arguments to pass to `brm_fn`.
 #' @import brms
-
 variant_rt <- function(log_rt = ~ 1, data, brm_fn = brm, ...) {
 
   # define Rt variant mixture
