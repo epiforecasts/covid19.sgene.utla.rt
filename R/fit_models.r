@@ -11,30 +11,23 @@ options(mc.cores = detectCores())
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
-  mutate(tier = if_else(tier == "none", "_none", tier))
+  mutate(tier = if_else(tier == "none", "_none", tier)) %>% 
+  mutate(sgtf_samples = as.integer(prop_sgtf * samples),
+         id = 1:n(), sgtf = NA_real_)
 
 # Example non-linear model ------------------------------------------------
-model <- bf(
-  rt_mean | se(rt_sd, sigma = TRUE) ~ (1 + var) * exp(logRt),
-  var ~ 0 + prop_sgtf,
-  logRt ~ 1,
-  family = student(),
-  nl = TRUE
-  # this is the change that allows future fancy stuff
-  # but as it stands tries to do a dot product :( (may need to open an issue)
-  #loop = FALSE
+
+source(here("R", "variant_rt.r"))
+
+fit <- variant_rt(
+  log_rt = ~ 1,
+  data = utla_rt_with_covariates %>%
+    rename(rt_mean = rt_mean_long_gt, rt_sd = rt_sd_long_gt),
+  brm_fn = make_stancode
 )
 
-priors <- c(prior(normal(0, 0.5), nlpar = "var"),
-            prior(student_t(3, 0, 0.5), nlpar = "logRt"))
 
-fit <- brm(
-  model,
-  data = utla_rt_with_covariates %>%
-   rename(rt_mean = rt_mean_long_gt,
-          rt_sd = rt_sd_long_gt),
-  prior = priors,
-  control = list(adapt_delta = 0.95))
+
 
 # Define custom family ------------------------------------------------
 add_var_student <- custom_family(
