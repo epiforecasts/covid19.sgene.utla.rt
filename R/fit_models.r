@@ -23,10 +23,10 @@ fit <- variant_rt(
   log_rt = ~ 1,
   data = utla_rt_with_covariates %>%
     rename(rt_mean = rt_mean_long_gt, rt_sd = rt_sd_long_gt),
-  brm_fn = make_stancode
+  brm_fn = brm
 )
 
-
+summary(fit)
 
 
 # Define custom family ------------------------------------------------

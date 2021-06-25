@@ -43,7 +43,7 @@ variant_rt <- function(log_rt = ~ 1, data, brm_fn = brm, ...) {
   # set weak priors
   # set sgtf to be latent and observed directly with no modifier
   priors <- c(
-    prior(normal(0, 0.5), nlpar = "var", resp = "rtmean"),
+    prior(student_t(3, 0, 0.5), nlpar = "var", resp = "rtmean"),
     prior(student_t(3, 0, 0.5), nlpar = "logRt", resp = "rtmean"),
     prior(constant(1), class = "phi", resp = "sgtf"),
     prior(constant(1), class = "Intercept", resp = "sgtf"),
