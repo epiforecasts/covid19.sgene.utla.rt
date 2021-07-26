@@ -1,6 +1,6 @@
 ---
 title: "Estimating the increase in reproduction number associated with the Delta variant using local area dynamics in England"
-author: Sam Abbott, Sebastian Funk on behalf of the CMMID Covid-19 Working Group
+author: Sam Abbott (1), Sebastian Funk (1) on behalf of the CMMID Covid-19 Working Group
 bibliography: references.bib
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
@@ -52,6 +52,8 @@ long_rt <- utla_rt_cases %>%
   rename_with(~ sub(paste0("_long_gt"), "", .x)) %>%
   filter(!is.na(rt_mean))
 ```
+
+1. Center for the Mathematical Modelling of Infectious Diseases, London School of Hygiene & Tropical Medicine, London WC1E 7HT, United Kingdom
 
 For correspondence: sebastian.funk@lshtm.ac.uk
 
