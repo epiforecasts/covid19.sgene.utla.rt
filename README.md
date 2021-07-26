@@ -1,7 +1,7 @@
 
 # Local area reproduction numbers and S-gene target failure
 
-This repository contains the data and code for analysis exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative/positive for the S-gene.
+This repository contains the data and code for analyses exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative/positive for the S-gene.
 
 ## Reproducibility
 
