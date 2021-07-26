@@ -55,7 +55,7 @@ long_rt <- utla_rt_cases %>%
 
 For correspondence: sebastian.funk@lshtm.ac.uk
 
-## Abstract
+# Abstract
 
 **Background:** Local estimates of the time-varying effective reproduction number (Rt) of Covid-19 in England become increasingly heterogeneous in England during April and May. This variation may have been attributed to the spread of novel SARS-CoV-2 variant "Delta". In this report we aimed to investigate the changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant variant "Alpha", and to correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
 
@@ -65,7 +65,17 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 **Conclusions:** Our results indicate that even after adjusting for residual variation over time between NHS regions S-gene positivity was associated with an increase in the effective reproduction number of Covid-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number will remain above 1 at current levels of behaviour.
 
-**Limitations:** Associations are purely observational and therefore subject to bias due to confounders not included in the model. Surge testing and infections brought in by travellers may have affected the case numbers and, consequently, reproduction number estimates. Our analysis does not distinguish between increased reproduction numbers due to transmission advantage and transmission advantage due to vaccine escape and therefore cannot distinguish between the two. Whilst we did investigate two different generation interval distributions we did not consider a scenario where the generation times were different between S-gene positives and negatives.
+# Introduction
+
+*Why* 
+
+Local estimates of the time-varying effective reproduction number (Rt) of Covid-19 in England become increasingly heterogeneous in England during April and May. This variation may have been attributed to the spread of novel SARS-CoV-2 variant "Delta". In this report we aimed to investigate the changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant variant "Alpha", and to correlate them with changes in the estimated reproduction number at the level of upper tier local authorities (UTLA).
+
+*Comparison + detail*
+
+*What and aim*
+
+We explored the relationship between the proportion of samples that were S-gene positive and the effective reproduction number of test-positive cases over time. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean R estimate. Results are shown with 90% credible intervals.
 
 # Method
 
@@ -95,6 +105,11 @@ $$ R_{t, i} = (1 - f_{it}) R^+_{t, i} +  f_{it} R^-_{t, i}$$
 where $R^-_{t, i}$ is the S-gene negative reproduction number, $R^+_{t, i}$ is the S-gene positive reproduction number, and it is assumed that $R^+_{t, i} = (1 + \alpha) R^-_{t, i}$. 
 
 We used a Student's t-distribution observation model with a single variance parameter and a single degrees of freedom parameter. All models were implemented using the `brms` [@brms] package in `R`. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/) (`may-update` branch).
+
+
+## Reproducibility
+
+All analysis was carried out using R version 4.0.5 [@R]. The analysis is available as an R package. A dockerfile has been made available with the code to enhance reproducibility [@Boettiger:2015dw].
 
 # Results
 
@@ -374,9 +389,43 @@ Our estimates with the longer generation interval without adjusting for addition
 
 Our results should be treated with caution as several caveats apply: we assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval, affecting our estimates [@park2021]. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of regression splines as sensitivity analysis, there may be UTLA level variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. Lastly, we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene positives observed in every UTLA per week, which were treated as fixed point estimates. Because of this, uncertainty in our regression coefficients are underestimated, and probably considerably so. Improving our inference method to incorporate these uncertainties is a future aim of our research. Lastly, whilst Delta increased rapidly throughout England over the period investigated, other variants as well as, on occasion, the previously predominant Alpha variant may yield S-gene positives. We therefore cannot rule out that our effect includes a component not related to the new variant.
 
-This analysis was done rapidly when Delta started increasing in England, in response to a need to gather scientific evidence for the scale of the transmission advantage. A previous version was considered by the Scienctific Pandemic Influenza Group on Modelling, SPI-M [@abbott2021]. We found consistent evidence that S-gene positivity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that at the levels of restrictions on contacts preent in England though April to June were not sufficient to reduce the reproduction number below 1 with the emerging Delta variant. 
+This analysis was done rapidly when Delta started increasing in England, in response to a need to gather scientific evidence for the scale of the transmission advantage. A previous version was considered by the Scientific Pandemic Influenza Group on Modelling, SPI-M [@abbott2021]. We found consistent evidence that S-gene positivity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that at the levels of restrictions on contacts preent in England though April to June were not sufficient to reduce the reproduction number below 1 with the emerging Delta variant. 
 
 Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
+
+**Data availability**
+
+Zenodo:
+
+This project contains the following underlying data:
+
+- `data/utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative/positive, normalised Google mobility data, and tier status by local authority over time.
+- `data/rt_weekly.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `data/sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
+- `data/mobility.rds`: Normalised Google mobility data stratified by context. 
+- `data/tiers.rds`: UTLA level tier level over time.
+
+License: MIT
+
+**Software availability**
+
+Source code is available from: https://github.com/epiforecasts/covid19.sgene.utla.rt
+
+Archived source code at time of publication: 
+
+License: MIT
+
+**Contributors**
+
+SA and SF concieved and designed the work, undertook the analysis, and wrote the manuscript. All authors approve the work for publication and agree to be accountable for the work.
+
+**Grant information**
+
+This work was supported by the Wellcome Trust through a Wellcome Senior Research Fellowship to SF [210758].
+
+**Competing interests**
+
+There are no competing interests. 
 
 # References
 

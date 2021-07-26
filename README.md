@@ -1,7 +1,7 @@
 
 # Local area reproduction numbers and S-gene target failure
 
-This repository contains the data and code for our report exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://raw.githubusercontent.com/epiforecasts/covid19.sgene.utla.rt/main/report.pdf).
+This repository contains the data and code for analysis exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative/positive for the S-gene.
 
 ## Reproducibility
 
@@ -10,7 +10,7 @@ This repository contains the data and code for our report exploring the associat
 All data used in the analysis can be found in the `data` folder in `rds` format. Available data include: 
 
 - `utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
-- `rt.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `rt_weekly.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
 - `sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
 - `tiers.rds`: UTLA level tier level over time.
@@ -68,3 +68,6 @@ Alternatively all steps can be reproduced using the following bash script:
 bash bin/update_analysis.sh
 ```
 
+# Population-level association between S-gene target failure and the relationship between cases, hospitalisations and deaths of Covid-19
+
+This repository also contains data, code and results for an analysis looking at the association between S-gene target failure and the relationship between cases, hopsitalisations, and deaths of COVID-19. See [the report](https://github.com/epiforecasts/covid19.sgene.utla.rt/blob/main/severity-report.pdf) for further details.
