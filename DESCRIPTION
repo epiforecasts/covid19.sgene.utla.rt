@@ -1,5 +1,5 @@
 Package: covid19.sgene.utla.rt
-Version: 0.1.0
+Version: 2.0.0
 Title: Local Area Reproduction Numbers and S-gene Target Failure
 Authors@R: c(
   person("Sebastian", "Funk", email = "sebastian.funk@lshtm.ac.uk", role = c("aut", "cre")),
@@ -23,10 +23,7 @@ Imports: here,
   tibble,
   parallel,
   covidregionaldata,
-  lemon, 
-  forcasts
-Remotes:
-  epiforecasts/covidregionaldata,
+  forcats
 Description: Local area reproduction numbers and S-gene target failure.
 RoxygenNote: 7.1.0
 NeedsCompilation: no

@@ -11,7 +11,8 @@ options(mc.cores = detectCores())
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
-  mutate(tier = if_else(tier == "none", "_none", tier))
+  mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier)) %>%
+  mutate(prop_sgtf = 1 - prop_sgtf)
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -49,30 +50,40 @@ base_model <- function(form, iter = 2000, ...) {
 }
 
 # Fit models --------------------------------------------------------------
-fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
+fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
+                       type = c("static", "dynamic"),
+                       static_weeks = 1) {
   # filter for target
   dynamic_data <- data %>%
-    rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
-    filter(!is.na(rt_mean))
-  static_data <- dynamic_data %>%
-    filter(week_infection == max(week_infection))
+     rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
+     filter(!is.na(rt_mean))
+  static_data <-
+    lapply(seq_len(static_weeks),
+           function(x) {
+             dynamic_data %>%
+               filter(week_infection == (max(week_infection) - (x - 1) * 7))
+           })
 
   ##Static model ------------------------------------------------------------
   # set model settings and priors
-  static_model <- function(form, ...) {
-    base_model(form = form, data = static_data,
+  static_model <- function(form, i, ...) {
+    base_model(form = form, data = static_data[[i]],
                control = list(adapt_delta = 0.95),
                ...)
   }
   # fit models
   static <- list()
-  if (!main_only) {
-    static[["intercept"]] <- static_model(rt_mean | vreal(prop_sgtf) ~ 1,
-                                          prior = priors)
+  if ("static" %in% type) {
+    static[["intercept"]] <-
+      lapply(seq_len(static_weeks), function(i) {
+        static_model(rt_mean | vreal(prop_sgtf) ~ 1, i, prior = priors)
+      })
     static[["region"]] <-
-      static_model(rt_mean | vreal(prop_sgtf) ~ nhser_name,
-                   prior = c(priors,
-                             prior(student_t(3, 0, 0.5), class = "b")))
+      lapply(seq_len(static_weeks), function(i) {
+        static_model(rt_mean | vreal(prop_sgtf) ~ nhser_name, i,
+                     prior = c(priors,
+                               prior(student_t(3, 0, 0.5), class = "b")))
+      })
   }
 
   # Dynamic model -----------------------------------------------------------
@@ -87,70 +98,63 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
   # fit models
 
   dynamic_models <- list()
-  if (!main_only) {
-    dynamic_models[["interventions_only"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier)
+  if ("dynamic" %in% type) {
+    if (!main_only) {
+      dynamic_models[["interventions_only"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier)
 
-    dynamic_models[["interventions"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
-                      retail_and_recreation + grocery_and_pharmacy +
-                      parks + transit_stations + workplaces + residential)
+      dynamic_models[["interventions"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
+          retail_and_recreation + transit_stations + workplaces + residential)
 
-    dynamic_models[["interventions_random"]] <-
+      dynamic_models[["interventions_random"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
+          retail_and_recreation + transit_stations + workplaces + residential)
+
+      dynamic_models[["interventions_region"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + nhser_name +
+          retail_and_recreation + transit_stations + workplaces + residential)
+    }
+
+    dynamic_models[["interventions_random_region"]] <-
       as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
-                      retail_and_recreation + grocery_and_pharmacy +
-                      parks + transit_stations + workplaces + residential)
+        nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
 
-    dynamic_models[["interventions_region"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + nhser_name +
-                      retail_and_recreation + grocery_and_pharmacy +
-                      parks + transit_stations + workplaces + residential)
-  }
+    if (!main_only) {
+      dynamic_models[["interventions_time_region"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
+                     nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
+    }
 
-  dynamic_models[["interventions_random_region"]] <-
-    as.formula(rt_mean | vreal(prop_sgtf) ~ tier +  (1 | utla_name) +
-                 nhser_name + retail_and_recreation + grocery_and_pharmacy +
-                 parks + transit_stations + workplaces + residential)
+    dynamic_models[["interventions_time_region_random"]] <-
+      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
+        (1 | utla_name) + nhser_name +
+        retail_and_recreation + transit_stations + workplaces + residential)
 
-  if (!main_only) {
-  dynamic_models[["interventions_time_region"]] <-
-    as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) + nhser_name +
-                    retail_and_recreation + grocery_and_pharmacy +
-                    parks + transit_stations + workplaces + residential)
-  }
+    if (!main_only) {
+      dynamic_models[["interventions_time_by_region"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
+          s(time, k = 9, by = nhser_name) +
+          retail_and_recreation + transit_stations + workplaces + residential)
+    }
 
-  dynamic_models[["interventions_time_region_random"]] <-
-    as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
-                    (1 | utla_name) + nhser_name +
-                    retail_and_recreation + grocery_and_pharmacy +
-                    parks + transit_stations + workplaces + residential)
-
-  if (!main_only) {
-    dynamic_models[["interventions_time_by_region"]] <-
+    dynamic_models[["interventions_time_by_random_region"]] <-
       as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
-                   s(time, k = 9, by = nhser_name) +
-                   retail_and_recreation + grocery_and_pharmacy +
-                   parks + transit_stations + workplaces + residential)
-  }
+        s(time, k = 9, by = nhser_name) +
+        (1 | utla_name) +
+        retail_and_recreation + transit_stations + workplaces + residential)
 
-  dynamic_models[["interventions_time_by_random_region"]] <-
-    as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
-                 s(time, k = 9, by = nhser_name) +
-                 (1 | utla_name) +
-                 retail_and_recreation + grocery_and_pharmacy +
-                 parks + transit_stations + workplaces + residential)
+    if (!main_only) {
+      dynamic_models[["interventions_independent_time_region"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
+          retail_and_recreation + transit_stations + workplaces + residential)
 
-  if (!main_only) {
-    dynamic_models[["interventions_independent_time_region"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
-                      retail_and_recreation + grocery_and_pharmacy +
-                      parks + transit_stations + workplaces + residential)
+      dynamic_models[["interventions_independent_time_random_region"]] <-
+        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
+          (1 | utla_name) +
+          retail_and_recreation + transit_stations + workplaces + residential)
+    }
 
-    dynamic_models[["interventions_independent_time_random_region"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
-                      (1 | utla_name) +
-                      retail_and_recreation + grocery_and_pharmacy +
-                      parks + transit_stations + workplaces + residential)
   }
 
   if (parallel) {
@@ -166,7 +170,9 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE) {
 # fit models
 gt <- c("short", "long")
 res <- lapply(gt, fit_models,
-              data = utla_rt_with_covariates)
+              data = utla_rt_with_covariates,
+              type = c("static", "dynamic"),
+              static_weeks = 6)
 names(res) <- gt
 
 # Save fits ---------------------------------------------------------------
@@ -178,3 +184,4 @@ save_results <- function(name) {
           here::here("output", paste0("sgene_fits_", name, "_gt.rds")))
 }
 lapply(gt, save_results)
+
