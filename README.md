@@ -67,7 +67,3 @@ Alternatively all steps can be reproduced using the following bash script:
 ```bash 
 bash bin/update_analysis.sh
 ```
-
-# Population-level association between S-gene target failure and the relationship between cases, hospitalisations and deaths of Covid-19
-
-This repository also contains data, code and results for an analysis looking at the association between S-gene target failure and the relationship between cases, hopsitalisations, and deaths of COVID-19. See [the report](https://github.com/epiforecasts/covid19.sgene.utla.rt/blob/main/severity-report.pdf) for further details.
