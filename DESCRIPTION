@@ -23,8 +23,7 @@ Imports: here,
   tibble,
   parallel,
   covidregionaldata,
-  lemon, 
-  forcasts
+  forcats
 Description: Local area reproduction numbers and S-gene target failure.
 RoxygenNote: 7.1.0
 NeedsCompilation: no
