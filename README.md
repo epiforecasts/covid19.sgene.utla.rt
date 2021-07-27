@@ -10,7 +10,7 @@ This repository contains the data and code for analyses exploring the associatio
 All data used in the analysis can be found in the `data` folder in `rds` format. Available data include: 
 
 - `utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
-- `rt_weekly.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
 - `sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
 - `tiers.rds`: UTLA level tier level over time.

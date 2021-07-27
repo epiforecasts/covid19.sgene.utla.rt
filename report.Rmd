@@ -384,7 +384,7 @@ Our results should be treated with caution as several caveats apply: we assumed 
 
 This analysis was done rapidly when "Delta" started increasing in England, in response to a need to gather scientific evidence for the scale of the transmission advantage and as such represents a real-time rather than a retrospective estimate. The underlying approach used was similar to that used in our previous real-time work on the "Alpha" variant [@Davies3055] which was also conducted under similar time pressures and had similar methodological limitations. We have not substantially updated the methods or results from the report considered by the Scientific Pandemic Influenza Group on Modelling, SPI-M [@abbott2021] in order to highlight the limitations of our work produced under time pressure and in the absence of data retrospectivly available. Future work should explore more appropriately modelling uncertainty in both transmission and sequence data and better capturing spatial variation. This work should ideally be done with the aim of producing a generalisable approach that can be applied to future scenarios in which rapid evidence needs to be synthesised in order to guide policy makers.
 
- We found consistent evidence that S-gene positivity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that at the levels of restrictions on contacts preent in England though April to June were not sufficient to reduce the reproduction number below 1 with the emerging "Delta" variant. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
+ We found consistent evidence that S-gene positivity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that at the levels of restrictions on contacts present in England though April to June were not sufficient to reduce the reproduction number below 1 with the emerging "Delta" variant. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
 
 **Data availability**
 
@@ -393,7 +393,7 @@ Zenodo:
 This project contains the following underlying data:
 
 - `data/utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative/positive, normalised Google mobility data, and tier status by local authority over time.
-- `data/rt_weekly.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `data/rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
 - `data/sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `data/mobility.rds`: Normalised Google mobility data stratified by context. 
 - `data/tiers.rds`: UTLA level tier level over time.
