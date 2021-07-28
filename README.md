@@ -70,7 +70,7 @@ bash bin/update_analysis.sh
 
 ### Archived results
 
-Instead of rerunning the code from scratch archived results can be retrieved from the [OSF](https://osf.io/h6e8n/) which also contains an archive of the code used for the analysis.
+Instead of rerunning the code from scratch archived results can be retrieved from the [OSF](https://osf.io/h6e8n/) which also contains an archive of the code used for the analysis. Note that this will overwrite any files saved in the `output` folder.
 
 ```r
 source(here::here("R/download_output.r"))
