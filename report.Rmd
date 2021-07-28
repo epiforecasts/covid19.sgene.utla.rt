@@ -81,7 +81,7 @@ We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@u
 
 ## Statistical analysis
 
-We calculated the weekly proportion of positive tests that were S-gene positive over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using gamma distributed,generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2; @ganyani] or with a mean of 5.5 days (SD: 0.5 days), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
+We calculated the weekly proportion of positive tests that were S-gene positive over time by local authority. We estimated reproduction numbers using the method described in [@rtwebsite] and [@rt-comparison] and implemented in the `EpiNow2` R package [@epinow2]. Daily updated estimates can be downloaded at [https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv](https://github.com/epiforecasts/covid-rt-estimates/blob/master/subnational/united-kingdom-local/cases/summary/rt.csv). We used two sets of estimates, obtained using gamma distributed, generation interval distributions with a mean of 3.6 days (standard deviation (SD): 0.7), and SD of 3.1 days (SD: 0.8) [@epinow2; @ganyani] or with a mean of 5.5 days (SD: 0.5 days), and SD of 2.1 days (SD: 0.25 days) [@ferretti], respectively.
 
 ```{r results='asis', echo = FALSE}
 cat(sep = "",
@@ -94,9 +94,9 @@ cat(sep = "",
 ```
 
 $$ R_{i,t} = \left(1 + \alpha f_{it}\right) \exp{\left( s(t) + \sum_j \beta_{j} T_{ijt} + \sum_k \gamma_{k} G_{ikt} + \log R_i \right)} $$
-where $R_t$ is an UTLA-level intercept corresponding to $R_t$ during national lockdown in February/March, $T_{ijt}$ is 1 if intervention $j$ (out of: January lockdown, reopening phase 1/2) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, workplace, public transport) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). We considered the model with only a static regional parameter as our baseline model as it yielded the most directly interpretable parameter estimates, assuming reproduction numbers could be completely explained by the relaxation steps and spread of S-gene positivity. The spline versions were designed to capture counfounding due to unmeasured covariates over time and were therefore considered as lower bounds on effect estimates. We lastly fitted the model for each $t$ separately, i.e. at fixed time slices ("Time-sliced") with and without a regional intercept.
+where $R_t$ is an UTLA-level intercept corresponding to $R_t$ during national lockdown in February/March, $T_{ijt}$ is 1 if intervention $j$ (out of: January lockdown, reopening phase 1/2) is in place and 0 otherwise, $G_{ikt}$ is the relative mobility in context $k$ (home, workplace, public transport) at time $t$ in UTLA $i$ as measured by Google, and $s(t)$ is a time-varying component, modelled either as a region-specific thin-plate regression spline ("Regional time-varying"), the sum of a static regional parameter and a national spline ("National time-varying"), or only a static regional parameter ("Regional static"). We considered the model with only a static regional parameter as our baseline model as it yielded the most directly interpretable parameter estimates, assuming reproduction numbers could be completely explained by the relaxation steps and spread of S-gene positivity. The spline versions were designed to capture counfounding due to unmeasured covariates over time and were therefore considered as lower bounds on effect estimates. We lastly fitted the model for each $t$ separately, i.e. at fixed time slices ("Time-sliced"), with and without a regional intercept.
 
-The key parameter is $\alpha$, the relative change in reproduction number in the presence of s-gene positivity that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested negative, and the reproduction number in any given UTLA is
+The key parameter is $\alpha$, the relative change in reproduction number in the presence of s-gene positivity that is not explained by any of the other variables, where $f_{it}$ is the proportion out of all positive tests for SARS-CoV-2 where the S-gene was tested postive, and the reproduction number in any given UTLA is
 $$ R_{t, i} = (1 - f_{it}) R^-_{t, i} +  f_{it} R^+_{t, i}$$
 where $R^-_{t, i}$ is the S-gene negative reproduction number, $R^+_{t, i}$ is the S-gene positive reproduction number, and it is assumed that $R^+_{t, i} = (1 + \alpha) R^-_{t, i}$. 
 
@@ -104,7 +104,7 @@ We used a Student's t-distribution observation model with a single variance para
 
 ## Reproducibility
 
-All models were implemented using the `brms` [@brms] package in `R` version 4.0.5 [@R]. All code required to reproduce this analysis is available from [https://github.com/epiforecasts/covid19.sgene.utla.rt/](https://github.com/epiforecasts/covid19.sgene.utla.rt/) (`may-update` branch). 
+All models were implemented using the `brms` [@brms] package in `R` version 4.0.5 [@R]. All code and data required to reproduce this analysis is available from both GitHub and the Open Science. 
 
 # Results
 
