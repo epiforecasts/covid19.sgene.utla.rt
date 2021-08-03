@@ -11,6 +11,7 @@ All data used in the analysis can be found in the `data` folder in `rds` format.
 
 - `utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
 - `rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
+- `utla_cases.rds`: UTLA level COVID-19 test positive cases.
 - `sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
 - `tiers.rds`: UTLA level tier level over time.

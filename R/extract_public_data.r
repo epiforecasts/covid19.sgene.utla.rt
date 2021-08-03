@@ -7,6 +7,7 @@ library(lubridate)
 library(readr)
 library(janitor)
 library(magrittr)
+library(covidregionaldata)
 
 # Extract data ---------------------------------------------------
 week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
@@ -163,8 +164,8 @@ mobility <- read_csv(mobility_file) %>%
   right_join(utla_nhs, by = c("utla_name")) %>%
   complete(date = seq(min(date, na.rm = TRUE),
                       max(date, na.rm = TRUE), by = "day"),
-	   utla_name = unique(utla_name),
-	   variable = unique(variable)) %>%
+           utla_name = unique(utla_name),
+           variable = unique(variable)) %>%
   filter(!is.na(date), !is.na(variable)) %>%
   group_by(date, nhs, variable) %>%
   mutate(median = median(value, na.rm = TRUE)) %>%
@@ -187,3 +188,7 @@ mobility <- read_csv(mobility_file) %>%
   arrange(utla_name, week_infection)
 
 saveRDS(mobility, here("data", "mobility.rds"))
+
+# save case data
+cases <- get_regional_data("UK", level = "2")
+saveRDS(cases, here("data", "utla_cases.rds"))

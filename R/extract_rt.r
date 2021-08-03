@@ -7,6 +7,9 @@ library(lubridate)
 library(readr)
 library(magrittr)
 
+# set to use either web version or local version of data\
+use_web <- FALSE
+
 # Download Rt estimates ---------------------------------------------------
 week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
   .$week_infection %>%
@@ -14,23 +17,27 @@ week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
   max() %>%
   wday()
 
-# extract from epiforecasts.io/covid
-rt_estimates <-
+# extract from epiforecasts.io/covid or use archived version
+if (use_web) {
+  rt_estimates <-
   paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
          "master/subnational/united-kingdom-local/cases/summary/rt.csv")
-short_rt <- vroom(rt_estimates)
-vroom_write(short_rt, here("data-raw", "rt-short-generation-time.csv"),
-            delim = ",")
+  short_rt <- vroom(rt_estimates)
+  vroom_write(short_rt, here("data-raw", "rt-short-generation-time.csv"),
+              delim = ",")
+}else{
+  short_rt <- vroom(here("data-raw", "rt-short-generation-time.csv"))
+}
 
 # load sensitivity analysis with longer generation time
 long_rt <- vroom(here("data-raw", "rt-long-generation-time.csv"))
 
 # join and save
-rt <- short_rt %>% 
-  mutate(generation_time = "short") %>% 
-  bind_rows(long_rt %>% 
-              mutate(generation_time = "long")) %>% 
-  filter(type == "estimate") %>% 
+rt <- short_rt %>%
+  mutate(generation_time = "short") %>%
+  bind_rows(long_rt %>%
+              mutate(generation_time = "long")) %>%
+  filter(type == "estimate") %>%
   select(generation_time, utla_name = region, date, everything(), -strat, -type)
 
 # Make Rt weekly
