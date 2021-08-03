@@ -163,8 +163,8 @@ mobility <- read_csv(mobility_file) %>%
   right_join(utla_nhs, by = c("utla_name")) %>%
   complete(date = seq(min(date, na.rm = TRUE),
                       max(date, na.rm = TRUE), by = "day"),
-	   utla_name = unique(utla_name),
-	   variable = unique(variable)) %>%
+           utla_name = unique(utla_name),
+           variable = unique(variable)) %>%
   filter(!is.na(date), !is.na(variable)) %>%
   group_by(date, nhs, variable) %>%
   mutate(median = median(value, na.rm = TRUE)) %>%

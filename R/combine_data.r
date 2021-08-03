@@ -32,6 +32,7 @@ tiers <- tiers %>%
 	replace_na(list(tier = "none")) %>%
 	arrange(utla_name, week_infection)
 
+start_using_memoise("data/.cache")
 cases <- get_regional_data("UK", level = "2") %>%
   filter(date >= min(utla_rt$week_infection) + 7) %>%
   mutate(week_infection = floor_date(date, "week", week_start) + 6 - 7) %>%
