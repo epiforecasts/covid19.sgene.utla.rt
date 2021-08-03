@@ -38,10 +38,9 @@ week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
   subtract(7) %>%
   max() %>%
   wday()
-# add data cache
-start_using_memoise("data/.cache")
+
 # get cases from cache or download
-cases <- get_regional_data("UK", level = "2") %>%
+cases <- readRDS(here("data", "utla_cases.rds")) %>%
   filter(date >= min(utla_rt$week_infection) + 7) %>%
   mutate(week_infection = floor_date(date, "week", week_start)  + 6 - 7) %>%
   group_by(week_infection, utla_name = authority) %>%
@@ -112,7 +111,7 @@ We used a Student's t-distribution observation model with a single variance para
 
 ## Reproducibility
 
-All models were implemented using the `brms` [@brms] package in `R` version 4.0.5 [@R]. All code and data required to reproduce this analysis is available from both GitHub and the Open Science. 
+All models were implemented using the `brms` [@brms] package in `R` version 4.0.5 [@R]. Notification data was downloaded and preprocessed using the `covidregionaldata` R package version 0.9.2 [@covidregionaldata]. All code and data required to reproduce this analysis is available from both GitHub and the Open Science. 
 
 # Results
 
@@ -390,7 +389,7 @@ Our estimates with the longer generation interval without adjusting for addition
 
 Our results should be treated with caution as several caveats apply: we assumed that S-gene positive and negative cases had the same generation interval, while a complementary hypothesis might be that the new variant shortened the generation interval, affecting our estimates [@park2021]. We assumed that the effect of tiers and lockdown applied uniformly across the country. While we did allow for a flexible regional-level behaviour through our use of UTLA level intercepts and region specifc regression splines as sensitivity analysis, there may be UTLA level, potentiallly spatial structured, variation that we did not capture in doing so. If this could explain some of the sub-regional differences in reproduction numbers, our estimate for the increased reproduction number could biased. In addition, we did not include case importation between UTLAs or cases linked to international travel which may have particularly biased initial estimates. Our estimates are also likely to be overly precise as we fitted the model only to the mean estimated reproduction numbers and therefore ignored uncertainty in these estimates as well as in the proportion of S-gene positives observed in every UTLA per week, which were treated as fixed point estimates and naively referenced to the week of infection using an assumed delay of one week. Improving our inference method to incorporate these uncertainties is a future aim of our research [@Abbott:pr]. Our estimates may also be biased as S-gene status is only a proxy for variant identification and the previously predominant "Alpha" variant may sometimes yield S-gene positives. We therefore cannot rule out that our effect includes a component not related to the new variant. Lastly, our analysis has focussed on the potential for a transmission advantage for the "Delta" variant but we did not consider alternative mechanisms such as an improved ability to evade immunue response elicited by either prior infection or vaccination. 
 
-This analysis was done rapidly when "Delta" started increasing in England, in response to a need to gather scientific evidence for the scale of the transmission advantage and as such represents a real-time rather than a retrospective estimate. The underlying approach used was similar to that used in our previous real-time work on the "Alpha" variant [@Davies3055] which was also conducted under similar time pressures and had similar methodological limitations. We have not substantially updated the methods or results from the report considered by the Scientific Pandemic Influenza Group on Modelling, SPI-M [@abbott2021] in order to highlight the limitations of our work produced under time pressure and in the absence of data retrospectivly available. Future work is ongoing explore more appropriately modelling uncertainty in both transmission and sequence data and better capturing spatial variation [@Abbott:pr]. This work should ideally be done with the aim of producing a generalisable approach that can be applied to future scenarios in which rapid evidence needs to be synthesised in order to guide policy makers.
+This analysis was done rapidly when "Delta" started increasing in England, in response to a need to gather scientific evidence for the scale of the transmission advantage and as such represents a real-time rather than a retrospective estimate. The underlying approach used was similar to that used in our previous real-time work on the "Alpha" variant [@Davies3055] which was also conducted under similar time pressures and had similar methodological limitations. We have not substantially updated the methods or results from the report considered by the Scientific Pandemic Influenza Group on Modelling, SPI-M [@abbott2021] in order to highlight the limitations of our work produced under time pressure and in the absence of data retrospectivly available. Future work is ongoing exploring more appropriately modelling uncertainty in both transmission and sequence data and better capturing spatial variation [@Abbott:pr]. This work should ideally be done with the aim of producing a generalisable approach that can be applied to future scenarios in which rapid evidence needs to be synthesised in order to guide policy makers.
 
  We found consistent evidence that S-gene positivity was associated with increased reproduction numbers across a range of models and assumptions. The precise estimate of the effect size was impacted by the both the degree of flexibility allowed in the model used and the assumed generation time. However, the lower bound of the effect implies that at the levels of restrictions on contacts present in England though April to June were not sufficient to reduce the reproduction number of the emerging "Delta" variant to below 1. Our analysis is fully reproducible and all the aggregated data used is publicly available for reuse and reinterpretation.
 
@@ -402,6 +401,7 @@ This project contains the following underlying data:
 
 - `data/utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative/positive, normalised Google mobility data, and tier status by local authority over time.
 - `data/rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
+- `data/utla_cases.rds`: UTLA level COVID-19 test positive cases.
 - `data/sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `data/mobility.rds`: Normalised Google mobility data stratified by context. 
 - `data/tiers.rds`: UTLA level tier level over time.

@@ -7,6 +7,7 @@ library(lubridate)
 library(readr)
 library(janitor)
 library(magrittr)
+library(covidregionaldata)
 
 # Extract data ---------------------------------------------------
 week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
@@ -187,3 +188,7 @@ mobility <- read_csv(mobility_file) %>%
   arrange(utla_name, week_infection)
 
 saveRDS(mobility, here("data", "mobility.rds"))
+
+# save case data
+cases <- get_regional_data("UK", level = "2")
+saveRDS(cases, here("data", "utla_cases.rds"))
