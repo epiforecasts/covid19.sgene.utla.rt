@@ -6,7 +6,8 @@ csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa
 header-includes:
    - \usepackage{float}
 output:
-    pdf_document
+    pdf_document:
+      keep_tex: TRUE
 always_allow_html: true
 ---
 
@@ -76,7 +77,7 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 **Method:** We explored the relationship between the proportion of samples that were S-gene positive and the $R_t$ of test-positive cases over time from the `r start_date` to the `r end_date`. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. We then fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean $R_t$ estimate.
 
-**Results:** We found evidence of an association between increased mean $R_t$ estimate and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level time-varying residuals were found to fit the data better, suggesting potential unexplained confounding.
+**Results:** We found evidence of an association between increased mean $R_t$ estimates and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level time-varying residuals were found to fit the data better, suggesting potential unexplained confounding.
 
 **Conclusions:** Our results indicated that even after adjusting for time-varying residuals between NHS regions, S-gene positivity was associated with an increase in the effective reproduction number of COVID-19. These findings were robust across a range of models and generation time assumptions, though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number of Delta was above 1 in almost all local authorities throughout the period of investigation.
 

@@ -11,3 +11,4 @@ update.r
 cache
 report_files
 report_cache
+*.tex
