@@ -1,6 +1,6 @@
 ---
 title: "Estimating the increase in reproduction number associated with the Delta variant using local area dynamics in England"
-author: Sam Abbott (1), Sebastian Funk (1) on behalf of the CMMID Covid-19 Working Group
+author: Sam Abbott (1), CMMID COVID-19 Working Group, Adam J. Kucharski (1), and Sebastian Funk (1)
 bibliography: references.bib
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl
 header-includes:
@@ -64,13 +64,13 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 # Abstract
 
-**Background:** Local estimates of the time-varying effective reproduction number ($R_t$) of Covid-19 in England became increasingly heterogeneous in England during April and May 2021. This variation may have been attributed to the spread of the novel Delta SARS-CoV-2 variant. This paper documents real-time analysis performed with the aim of investigating the association between changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant Alpha variant, and the estimated time-varying reproduction number at the level of upper-tier local authorities (UTLA).
+**Background:** Local estimates of the time-varying effective reproduction number ($R_t$) of COVID-19 in England became increasingly heterogeneous in England during April and May 2021. This variation may have been attributed to the spread of the novel Delta SARS-CoV-2 variant. This paper documents real-time analysis performed with the aim of investigating the association between changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant Alpha variant, and the estimated time-varying reproduction number at the level of upper-tier local authorities (UTLA).
 
 **Method:** We explored the relationship between the proportion of samples that were S-gene positive and the effective reproduction number of test-positive cases over time from the `r start_date` to the `r end_date`. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean $R_t$ estimate. Results are shown with 90% credible intervals.
 
 **Results:** We found evidence of an association between increased mean $R_t$ estimate and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better, suggesting a potential role of unexplained confounders.
 
-**Conclusions:** Our results indicated that even after adjusting for residual variation over time between NHS regions S-gene positivity was associated with an increase in the effective reproduction number of Covid-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number of Delta was above 1 in almost all local authorities throughout the period of investigation.
+**Conclusions:** Our results indicated that even after adjusting for residual variation over time between NHS regions S-gene positivity was associated with an increase in the effective reproduction number of COVID-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number of Delta was above 1 in almost all local authorities throughout the period of investigation.
 
 # Introduction
 
@@ -82,7 +82,7 @@ In order to provide evidence rapidly we adapted previous work on the Alpha varia
 
 ## Data
 
-We used 4 main sources of data: test positive Covid-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority provided by Public Health England (PHE), Google mobility data stratified by context [@google], and data on the timings changes in national restrictions [@wikicoviduk]. National restrictions were coded by hand as either national lockdown or one of the 3 reopening steps used by the UK government during the study period. National lockdown applied prior to the 8th of March 2021 when schools reopened in England (step 1). On the 12th of April outdoor pubs, restaurants and non-essential shops reopened in England (step 2) with this being followed by most rules affecting outdoor social contact being removed, six people being allowed to meet indoors, and indoor hospitality services being reopened on the 17th of May 2021 (step 3).
+We used 4 main sources of data: test positive COVID-19 notifications by UTLA [@ukgov], S-gene status from PCR tests by local authority provided by Public Health England (PHE), Google mobility data stratified by context [@google], and data on the timings changes in national restrictions [@wikicoviduk]. National restrictions were coded by hand as either national lockdown or one of the 3 reopening steps used by the UK government during the study period. National lockdown applied prior to the 8th of March 2021 when schools reopened in England (step 1). On the 12th of April outdoor pubs, restaurants and non-essential shops reopened in England (step 2) with this being followed by most rules affecting outdoor social contact being removed, six people being allowed to meet indoors, and indoor hospitality services being reopened on the 17th of May 2021 (step 3).
 
 We aggregated mobility data by taking the mean for each week. We calculated the weekly proportion of positive tests that were S-gene positive over time by local authority by sequence data. We then assumed a one week delay between infection and sequencing date and used this to reference the proportion of S-gene positives by week of infection rather than by week of sequence. Complete case analysis was used and we restricted the data used in later analyses to only include the period from beginning `r format(min(utla_rt$week_infection), "%A, %d %B")` and ending `r format(max(utla_rt$week_infection), "%A, %d %B")`. We further restricted the analysis to UTLA/week combinations where more than 20% of reported cases and more than 20 in total had an S-gene status reported.
 
@@ -429,6 +429,10 @@ This work was supported by the Wellcome Trust through a Wellcome Senior Research
 **Competing interests**
 
 There are no competing interests. 
+
+# Acknowledgements
+
+The following authors were part of the CMMID COVID-19 Working Group: Simon R Procter, Rachael Pung, Mihaly Koltai, Stéphane Hué, Carl A B Pearson, Katharine Sherratt, Paul Mee, Rosanna C Barnard, Nicholas G. Davies, David Hodgson, Kerry LM Wong, Kaja Abbas, Nikos I Bosse, Yang Liu, Sophie R Meakin, Joel Hellewell, Hamish P Gibbs, Matthew Quaife, Ciara V McCarthy, Yalda Jafari, Frank G Sandmann, Rachel Lowe, James D Munday, Graham Medley, Gwenan M Knight, C Julian Villabona-Arenas, William Waites, Fiona Yueqian Sun, Mark Jit, Alicia Rosello, Akira Endo, Emilie Finch, Christopher I Jarvis, Kiesha Prem, Katherine E. Atkins, Damien C Tully, Lloyd A C Chapman, Oliver Brady, Kathleen O'Reilly, Rosalind M Eggo, and Amy Gimma.
 
 # References
 
