@@ -395,8 +395,6 @@ This analysis was done rapidly when Delta started increasing in England, in resp
 
 **Data availability**
 
-Zenodo:
-
 This project contains the following underlying raw and processed data:
 
 - `data/utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative/positive, normalised Google mobility data, and tier status by local authority over time.
@@ -406,7 +404,9 @@ This project contains the following underlying raw and processed data:
 - `data/mobility.rds`: Normalised Google mobility data stratified by context. 
 - `data/tiers.rds`: UTLA level tier level over time.
 
-All analysis output  is available from the Open Science Framework: https://osf.io/gjskf/
+All underlying data is available from the Open Science Framework along with code and model output: http://doi.org/10.17605/OSF.IO/H6E8N
+
+Underlying data and code is also available from Zenodo: 
 
 License: MIT
 
@@ -414,7 +414,10 @@ License: MIT
 
 Source code is available from: https://github.com/epiforecasts/covid19.sgene.utla.rt
 
-Archived source code at the time of publication: 
+Archived source code at the time of publication:
+
+  - OSF: http://doi.org/10.17605/OSF.IO/H6E8N
+  - Zenodo: 
 
 License: MIT
 
