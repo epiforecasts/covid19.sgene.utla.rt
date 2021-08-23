@@ -6,3 +6,4 @@ output
 *.html
 update.r
 *.docx
+.trackdown
