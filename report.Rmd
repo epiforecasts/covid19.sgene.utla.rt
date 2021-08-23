@@ -415,7 +415,7 @@ This project contains the following underlying raw and processed data:
 
 All underlying data is available from the Open Science Framework along with code and model output: http://doi.org/10.17605/OSF.IO/H6E8N
 
-Underlying data and code is also available from Zenodo: 
+Underlying data and code is also available from Zenodo: http://doi.org/10.5281/zenodo.5236662
 
 License: MIT
 
@@ -426,7 +426,7 @@ Source code is available from: https://github.com/epiforecasts/covid19.sgene.utl
 Archived source code at the time of publication:
 
   - OSF: http://doi.org/10.17605/OSF.IO/H6E8N
-  - Zenodo: 
+  - Zenodo: http://doi.org/10.5281/zenodo.5236662
 
 License: MIT
 
