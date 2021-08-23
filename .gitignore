@@ -7,3 +7,7 @@ output
 update.r
 *.docx
 .trackdown
+*.doc
+cache
+report_files
+report_cache

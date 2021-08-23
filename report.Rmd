@@ -7,9 +7,17 @@ header-includes:
    - \usepackage{float}
 output:
     pdf_document
+always_allow_html: true
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE, include = FALSE}
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  cache = TRUE,
+  dev = c("pdf", "png", "tiff")
+)
+
 library(here)
 library(dplyr)
 library(tidyr)
@@ -64,19 +72,19 @@ For correspondence: sebastian.funk@lshtm.ac.uk
 
 # Abstract
 
-**Background:** Local estimates of the time-varying effective reproduction number ($R_t$) of COVID-19 in England became increasingly heterogeneous in England during April and May 2021. This variation may have been attributed to the spread of the novel Delta SARS-CoV-2 variant. This paper documents real-time analysis performed with the aim of investigating the association between changes in the proportion of positive cases that were S-gene positive, an indicator of the novel variant in front of the background of the previously predominant Alpha variant, and the estimated time-varying reproduction number at the level of upper-tier local authorities (UTLA).
+**Background:** Local estimates of the time-varying effective reproduction number ($R_t$) of COVID-19 in England became increasingly heterogeneous during April and May 2021. This may have been attributable to the spread of the Delta SARS-CoV-2 variant. This paper documents real-time analysis that aimed to investigate the association between changes in the proportion of positive cases that were S-gene positive, an  indicator of the Delta variant against a background of the previously predominant Alpha variant, and the estimated time-varying $R_t$ at the level of upper-tier local authorities (UTLA).
 
-**Method:** We explored the relationship between the proportion of samples that were S-gene positive and the effective reproduction number of test-positive cases over time from the `r start_date` to the `r end_date`. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. The `brms` R package was used to fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean $R_t$ estimate. Results are shown with 90% credible intervals.
+**Method:** We explored the relationship between the proportion of samples that were S-gene positive and the $R_t$ of test-positive cases over time from the `r start_date` to the `r end_date`. Effective reproduction numbers were estimated using the `EpiNow2` R package independently for each local authority using two different estimates of the generation time. We then fit a range of regression models to estimate a multiplicative relationship between S-gene positivity and weekly mean $R_t$ estimate.
 
-**Results:** We found evidence of an association between increased mean $R_t$ estimate and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level residual variation over time were found to fit the data better, suggesting a potential role of unexplained confounders.
+**Results:** We found evidence of an association between increased mean $R_t$ estimate and the proportion of S-gene positives across all models evaluated with the magnitude of the effect increasing as model flexibility was decreased. Models that adjusted for either national level or NHS region level time-varying residuals were found to fit the data better, suggesting potential unexplained confounding.
 
-**Conclusions:** Our results indicated that even after adjusting for residual variation over time between NHS regions S-gene positivity was associated with an increase in the effective reproduction number of COVID-19. These findings were robust across a range of models and generation time assumptions though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number of Delta was above 1 in almost all local authorities throughout the period of investigation.
+**Conclusions:** Our results indicated that even after adjusting for time-varying residuals between NHS regions, S-gene positivity was associated with an increase in the effective reproduction number of COVID-19. These findings were robust across a range of models and generation time assumptions, though the specific effect size was variable depending on the assumptions used. The lower bound of the estimated effect indicated that the reproduction number of Delta was above 1 in almost all local authorities throughout the period of investigation.
 
 # Introduction
 
-In April 2021 imports of the B.1.617.2 (Delta) SARS-CoV-2 variant was detected in England amid concerns that it had been responsible for the large increase in reported COVID-19 cases in India. In early May this variant was declared a variant of concern and evidence was required to assess potential differences between the Delta variant and the dominant Alpha variant in order to guide policymakers decision making. 
+In April 2021, imported cases with the Delta (B.1.617.2) SARS-CoV-2 variant were first detected in England. At the same time, there was increasing concern that the Delta variant had been responsible for the large increase in reported COVID-19 cases in India. In early May, Delta was declared a variant of concern and evidence was required to assess potential differences to the dominant Alpha variant in order to guide policy decisions in England. 
 
-In order to provide evidence rapidly we adapted previous work on the Alpha variant [@Davies3055] to estimate the association between the time-varying effective reproduction number ($R_t$) at the level of upper-tier local authorities (UTLA), as estimated using our previously published approach [@rtwebsite; @rt-comparison; @epinow2], and the proportion of positive cases that were S-gene positive. Due to the number of unknowns, we presented a range of models and scenarios exploring model assumptions. Versions of this work were considered on the 2nd and 9th of June by the Scientific Pandemic Influenza Group on Modelling (SPI-M) and by Scientific Advisory Group for Emergencies 91 (SAGE) on the 3rd of June [@abbott2021]. The approach and results presented here have not been substantially updated in order to reflect the evidence available at the time. All data and code used in this study are available with the intention of allowing others to inspect and improve the analysis methodology.
+To provide evidence rapidly, we adapted previous work on the Alpha variant [@Davies3055] to estimate the association between the time-varying effective reproduction number ($R_t$) at the level of upper-tier local authorities (UTLA), as estimated using our previously published approach [@rtwebsite; @rt-comparison; @epinow2], and the proportion of positive cases that were S-gene positive. Due to the number of unknowns, we presented a range of models and scenarios exploring model assumptions. Versions of this work were considered on the 2nd and 9th of June by the Scientific Pandemic Influenza Group on Modelling (SPI-M) and by Scientific Advisory Group for Emergencies 91 (SAGE) on the 3rd of June [@abbott2021]. The approach and results presented here have not been substantially updated in order to reflect the evidence available at the time. All data and code used in this study are available with the intention of allowing others to inspect and improve the analysis methodology.
 
 # Method
 
@@ -228,7 +236,7 @@ loo_tab_cap <-
   "\\emph{Model comparison (long generation interval) by difference in expected log-predictive density}"
 ```
 
-```{r loo_table, echo = FALSE, results = 'asis'}
+```{r loo_table, echo = FALSE}
 fn <- list()
 for (type in names(models)) {
   lc <- loo::loo_compare(models[[type]]$loos[full_models])
@@ -258,7 +266,7 @@ reg_tab_cap <-
   "\\emph{Parameter $\\alpha$ with 95\\% credible intervals for the three different models of $s(t)$ for short (3.6 days mean) and long (5.5 days mean) generation intervals. The estimate corresponds to the multiplicative increase in reproduction number estimated for S-gene positive cases}."
 ```
 
-```{r regression_log_coeff_table, echo = FALSE, results = 'asis'}
+```{r regression_log_coeff_table, echo = FALSE}
 fn <- list()
 for (type in names(models)) {
   lc <- loo::loo_compare(models[[type]]$loos[full_models])

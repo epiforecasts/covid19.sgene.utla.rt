@@ -19,4 +19,4 @@ Rscript R/fit_models.r
 Rscript R/compare_models.r
 
 # update report
-Rscript -e "rmarkdown::render('report.Rmd')"
+bash bin/render_report.sh
