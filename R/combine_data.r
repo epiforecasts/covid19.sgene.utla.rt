@@ -24,7 +24,7 @@ utla_cases <- readRDS(here("data", "utla_cases.rds"))
 utla_rt <- sgene_by_utla %>%
   inner_join(rt_weekly, by = c("week_infection", "utla_name")) %>%
   select(week_infection, nhser_name, utla_name,
-         prop_sgtf, samples, starts_with("rt_")) %>%
+         prop, samples, starts_with("rt_")) %>%
   mutate(time = as.numeric((week_infection - min(week_infection)) / 7))
 
 tiers <- tiers %>%
