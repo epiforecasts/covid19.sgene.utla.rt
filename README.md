@@ -1,7 +1,7 @@
 
-# Local area reproduction numbers and S-gene target failure
+# Estimating the increase in reproduction number associated with the Delta variant using local area dynamics in England
 
-This repository contains the data and code for our report exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of Covid-19 tests negative for the S-gene. The report can be found [here](https://raw.githubusercontent.com/epiforecasts/covid19.sgene.utla.rt/main/report.pdf).
+This repository contains the data and code for analyses exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of COVID-19 tests negative/positive for the S-gene as a proxy for the Delta variant.
 
 ## Reproducibility
 
@@ -10,7 +10,8 @@ This repository contains the data and code for our report exploring the associat
 All data used in the analysis can be found in the `data` folder in `rds` format. Available data include: 
 
 - `utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative, normalised Google mobility data, and tier status by local authority over time.
-- `rt.rds`: Summarised daily UTLA reproduction number estimates using both a short and a long generation time.
+- `rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
+- `utla_cases.rds`: UTLA level COVID-19 test positive cases.
 - `sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `mobility.rds`: Normalised Google mobility data stratified by context. 
 - `tiers.rds`: UTLA level tier level over time.
@@ -68,3 +69,10 @@ Alternatively all steps can be reproduced using the following bash script:
 bash bin/update_analysis.sh
 ```
 
+### Archived results
+
+Instead of rerunning the code from scratch archived results can be retrieved from the [OSF](https://osf.io/h6e8n/) which also contains an archive of the code used for the analysis. Note that this will overwrite any files saved in the `output` folder.
+
+```r
+source(here::here("R/download_output.r"))
+```

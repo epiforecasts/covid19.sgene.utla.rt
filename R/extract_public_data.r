@@ -6,9 +6,15 @@ library(here)
 library(lubridate)
 library(readr)
 library(janitor)
+library(magrittr)
+library(covidregionaldata)
 
 # Extract data ---------------------------------------------------
-week_start <- 1
+week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+  .$week_infection %>%
+  subtract(7) %>%
+  max() %>%
+  wday()
 
 utlas <- readRDS(here("data", "sgene_by_utla.rds")) %>%
   .$utla_name %>%
@@ -118,8 +124,8 @@ utla_nhs <- new_tiers %>%
 
 new_tiers <- new_tiers %>%
   select(-nhs) %>%
-  mutate(tier = if_else(tier == "National Lockdown", "national_lockdown",
-                        paste0("tier_", tier)))
+  mutate(tier = if_else(grepl("^[0-9]+$", tier), paste0("tier_", tier),
+                         tolower(sub(" ", "_", tier))))
 
 # Join into single dataset ------------------------------------------------
 tiers <- start_tiers %>%
@@ -130,7 +136,7 @@ tiers <- start_tiers %>%
            utla_name = unique(utla_name)) %>%
   arrange(utla_name, date) %>%
   fill(tier, .direction = "down") %>%
-  mutate(week_infection = floor_date(date, "week", week_start)) %>%
+  mutate(week_infection = floor_date(date, "week", week_start) - 1) %>%
   group_by(utla_name, week_infection, tier) %>%
   summarise(n = n(), .groups = "drop") %>%
   group_by(utla_name, week_infection) %>%
@@ -141,9 +147,16 @@ tiers <- start_tiers %>%
 saveRDS(tiers, here("data", "tiers.rds"))
 
 # Extract mobility data ---------------------------------------------------
-mobility_file <- here("data-raw", "gm_for_analysis-2020-01-18.csv")
+gm_lad <- read_csv(here("data-raw", "google_lad.csv"))
+mobility_file <- here("data-raw", "2021_GB_Region_Mobility_Report.csv")
 
 mobility <- read_csv(mobility_file) %>%
+  filter(!is.na(sub_region_1)) %>%
+  pivot_longer(ends_with("_percent_change_from_baseline"),
+               names_to = "variable") %>%
+  select(name = sub_region_1, date, variable, value) %>%
+  mutate(variable = sub("_percent_change_from_baseline", "", variable)) %>%
+  inner_join(gm_lad, by = "name") %>%
   select(date, laname = lad_nm,
          variable = variable, value = value) %>%
   inner_join(ltla_utla, by = "laname") %>%
@@ -151,8 +164,8 @@ mobility <- read_csv(mobility_file) %>%
   right_join(utla_nhs, by = c("utla_name")) %>%
   complete(date = seq(min(date, na.rm = TRUE),
                       max(date, na.rm = TRUE), by = "day"),
-	   utla_name = unique(utla_name),
-	   variable = unique(variable)) %>%
+           utla_name = unique(utla_name),
+           variable = unique(variable)) %>%
   filter(!is.na(date), !is.na(variable)) %>%
   group_by(date, nhs, variable) %>%
   mutate(median = median(value, na.rm = TRUE)) %>%
@@ -164,7 +177,7 @@ mobility <- read_csv(mobility_file) %>%
                              "Cornwall and Isles of Scilly", utla_name),
          utla_name = if_else(utla_name %in% c("Hackney", "City of London"),
                         "Hackney and City of London", utla_name)) %>%
-  mutate(week_infection = floor_date(date, "week", week_start)) %>%
+  mutate(week_infection = floor_date(date, "week", week_start) + 6) %>%
   group_by(week_infection, utla_name, variable) %>%
   summarise(value = mean(value), .groups = "drop") %>%
   group_by(variable) %>%
@@ -175,3 +188,7 @@ mobility <- read_csv(mobility_file) %>%
   arrange(utla_name, week_infection)
 
 saveRDS(mobility, here("data", "mobility.rds"))
+
+# save case data
+cases <- get_regional_data("UK", level = "2")
+saveRDS(cases, here("data", "utla_cases.rds"))
