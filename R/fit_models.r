@@ -12,9 +12,12 @@ utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
   mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier)) %>%
-  mutate(prop = 1 - prop)
+  mutate(prop = 1 - prop) %>%
+  mutate(tier = if_else(tier == "none", "_none", tier)) %>% 
+  mutate(positive_samples = as.integer(prop * samples),
+         id = 1:n(), positive_prop = NA_real_)
 
-# Add custom family -------------------------------------------------------
+# Define custom family ------------------------------------------------
 add_var_student <- custom_family(
   "add_var_student", dpars = c("mu", "sigma", "nu", "alpha"),
   links = c("log", "identity", "identity", "identity"),
