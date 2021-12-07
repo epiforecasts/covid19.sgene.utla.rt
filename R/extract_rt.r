@@ -8,10 +8,10 @@ library(readr)
 library(magrittr)
 
 # set to use either web version or local version of data\
-use_web <- FALSE
+use_web <- TRUE
 
 # Download Rt estimates ---------------------------------------------------
-week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+week_start <- readRDS(here("data", "by_utla.rds")) %>%
   .$week_infection %>%
   subtract(7) %>%
   max() %>%
@@ -22,35 +22,28 @@ if (use_web) {
   rt_estimates <-
   paste0("https://raw.githubusercontent.com/epiforecasts/covid-rt-estimates/",
          "master/subnational/united-kingdom-local/cases/summary/rt.csv")
-  short_rt <- vroom(rt_estimates)
-  vroom_write(short_rt, here("data-raw", "rt-short-generation-time.csv"),
-              delim = ",")
-}else{
-  short_rt <- vroom(here("data-raw", "rt-short-generation-time.csv"))
+  rt <- vroom(rt_estimates)
+  vroom_write(rt, here("data-raw", "rt.csv"), delim = ",")
+} else{
+  rt <- vroom(here("data-raw", "rt.csv"))
 }
 
-# load sensitivity analysis with longer generation time
-long_rt <- vroom(here("data-raw", "rt-long-generation-time.csv"))
-
 # join and save
-rt <- short_rt %>%
-  mutate(generation_time = "short") %>%
-  bind_rows(long_rt %>%
-              mutate(generation_time = "long")) %>%
+rt <- rt %>%
   filter(type == "estimate") %>%
-  select(generation_time, utla_name = region, date, everything(), -strat, -type)
+  select(utla_name = region, date, everything(), -strat, -type)
 
 # Make Rt weekly
 rt_weekly <- rt %>%
   mutate(week_infection =
            floor_date(date, "week", week_start = week_start) + 6) %>%
-  group_by(utla_name, week_infection, generation_time) %>%
+  group_by(utla_name, week_infection) %>%
   summarise(mean = mean(mean), sd = mean(sd), n = n(), .groups = "drop") %>%
   filter(n == 7) %>%
   select(-n) %>%
   pivot_longer(c(mean, sd)) %>%
-  mutate(gt_rt = paste("rt", name, generation_time, "gt", sep = "_")) %>%
-  select(-generation_time, -name) %>%
-  pivot_wider(names_from = gt_rt)
+  mutate(rt = paste("rt", name, sep = "_")) %>%
+  select(-name) %>%
+  pivot_wider(names_from = rt)
 
 saveRDS(rt_weekly, here("data", "rt_weekly.rds"))

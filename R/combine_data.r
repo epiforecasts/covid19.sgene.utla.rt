@@ -7,7 +7,7 @@ library(lubridate)
 library(covidregionaldata)
 library(magrittr)
 
-week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+week_start <- readRDS(here("data", "by_utla.rds")) %>%
   .$week_infection %>%
   subtract(7) %>%
   max() %>%
@@ -15,16 +15,16 @@ week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
 
 # Load data ---------------------------------------------------------------
 rt_weekly <- readRDS(here("data", "rt_weekly.rds"))
-sgene_by_utla <- readRDS(here("data", "sgene_by_utla.rds"))
+by_utla <- readRDS(here("data", "by_utla.rds"))
 tiers <- readRDS(here("data", "tiers.rds"))
 mobility <- readRDS(here("data", "mobility.rds"))
 utla_cases <- readRDS(here("data", "utla_cases.rds"))
 
 # Combine data sources ----------------------------------------------------
-utla_rt <- sgene_by_utla %>%
+utla_rt <- by_utla %>%
   inner_join(rt_weekly, by = c("week_infection", "utla_name")) %>%
   select(week_infection, nhser_name, utla_name,
-         prop_sgtf, samples, starts_with("rt_")) %>%
+         prop, samples, starts_with("rt_")) %>%
   mutate(time = as.numeric((week_infection - min(week_infection)) / 7))
 
 tiers <- tiers %>%
@@ -54,6 +54,6 @@ utla_rt_with_covariates <- utla_rt %>%
   inner_join(cases_last_4_weeks,
              by = c("utla_name", "nhser_name")) %>%
   mutate(nhser_name = factor(nhser_name)) %>%
-  filter(samples >= 20, sampling >= 0.2)
+  filter(samples >= 20)
 
 saveRDS(utla_rt_with_covariates, here("data", "utla_rt_with_covariates.rds"))

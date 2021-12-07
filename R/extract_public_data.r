@@ -10,13 +10,13 @@ library(magrittr)
 library(covidregionaldata)
 
 # Extract data ---------------------------------------------------
-week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+week_start <- readRDS(here("data", "by_utla.rds")) %>%
   .$week_infection %>%
   subtract(7) %>%
   max() %>%
   wday()
 
-utlas <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+utlas <- readRDS(here("data", "by_utla.rds")) %>%
   .$utla_name %>%
   unique()
 

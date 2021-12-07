@@ -11,8 +11,7 @@ options(mc.cores = detectCores())
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
   filter(week_infection > "2020-10-01") %>%
-  mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier)) %>%
-  mutate(prop_sgtf = 1 - prop_sgtf)
+  mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier))
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -50,12 +49,11 @@ base_model <- function(form, iter = 2000, ...) {
 }
 
 # Fit models --------------------------------------------------------------
-fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
+fit_models <- function(data, main_only = TRUE, parallel = TRUE,
                        type = c("static", "dynamic"),
                        static_weeks = 1) {
   # filter for target
   dynamic_data <- data %>%
-     rename_with(~ sub(paste0("_", gt, "_gt"), "", .x)) %>%
      filter(!is.na(rt_mean))
   static_data <-
     lapply(seq_len(static_weeks),
@@ -76,11 +74,11 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
   if ("static" %in% type) {
     static[["intercept"]] <-
       lapply(seq_len(static_weeks), function(i) {
-        static_model(rt_mean | vreal(prop_sgtf) ~ 1, i, prior = priors)
+        static_model(rt_mean | vreal(prop) ~ 1, i, prior = priors)
       })
     static[["region"]] <-
       lapply(seq_len(static_weeks), function(i) {
-        static_model(rt_mean | vreal(prop_sgtf) ~ nhser_name, i,
+        static_model(rt_mean | vreal(prop) ~ nhser_name, i,
                      prior = c(priors,
                                prior(student_t(3, 0, 0.5), class = "b")))
       })
@@ -101,56 +99,56 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
   if ("dynamic" %in% type) {
     if (!main_only) {
       dynamic_models[["interventions_only"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier)
+        as.formula(rt_mean | vreal(prop) ~ tier)
 
       dynamic_models[["interventions"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
+        as.formula(rt_mean | vreal(prop) ~ tier +
           retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_random"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
+        as.formula(rt_mean | vreal(prop) ~ tier + (1 | utla_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_region"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + nhser_name +
+        as.formula(rt_mean | vreal(prop) ~ tier + nhser_name +
           retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_random_region"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + (1 | utla_name) +
+      as.formula(rt_mean | vreal(prop) ~ tier + (1 | utla_name) +
         nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_time_region"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
+        as.formula(rt_mean | vreal(prop) ~ tier + s(time, k = 9) +
                      nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_time_region_random"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier + s(time, k = 9) +
+      as.formula(rt_mean | vreal(prop) ~ tier + s(time, k = 9) +
         (1 | utla_name) + nhser_name +
         retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_time_by_region"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
+        as.formula(rt_mean | vreal(prop) ~ tier +
           s(time, k = 9, by = nhser_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
     }
 
     dynamic_models[["interventions_time_by_random_region"]] <-
-      as.formula(rt_mean | vreal(prop_sgtf) ~ tier +
+      as.formula(rt_mean | vreal(prop) ~ tier +
         s(time, k = 9, by = nhser_name) +
         (1 | utla_name) +
         retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
       dynamic_models[["interventions_independent_time_region"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
+        as.formula(rt_mean | vreal(prop) ~ tier + factor(time):nhser_name +
           retail_and_recreation + transit_stations + workplaces + residential)
 
       dynamic_models[["interventions_independent_time_random_region"]] <-
-        as.formula(rt_mean | vreal(prop_sgtf) ~ tier + factor(time):nhser_name +
+        as.formula(rt_mean | vreal(prop) ~ tier + factor(time):nhser_name +
           (1 | utla_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
     }
@@ -168,20 +166,13 @@ fit_models <- function(gt, data, main_only = TRUE, parallel = TRUE,
 }
 
 # fit models
-gt <- c("short", "long")
-res <- lapply(gt, fit_models,
-              data = utla_rt_with_covariates,
-              type = c("static", "dynamic"),
-              static_weeks = 6)
-names(res) <- gt
+res <- fit_models(data = utla_rt_with_covariates,
+                  type = c("static", "dynamic"),
+                  static_weeks = 6)
 
 # Save fits ---------------------------------------------------------------
 output_path <- here("output")
 dir.create(output_path, recursive = TRUE, showWarnings = FALSE)
 
-save_results <- function(name) {
-  saveRDS(res[[name]],
-          here::here("output", paste0("sgene_fits_", name, "_gt.rds")))
-}
-lapply(gt, save_results)
+saveRDS(res, here::here("output", paste0("fits.rds")))
 
