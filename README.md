@@ -3,7 +3,7 @@
 
 **This repository is under active development. See the [releases](https://github.com/epiforecasts/covid19.sgene.utla.rt/releases) for stable analyses.**
 
-This repository contains the data and code for analyses exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of COVID-19 tests negative/positive for the S-gene as a proxy for the Delta variant.
+This repository contains the data and code for analyses exploring the association between upper-tier local area (UTLA) reproduction number estimates in England and the proportion of COVID-19 tests negative/positive for the S-gene as a proxy for the Alpha/Delta variants. A preprint describing the work in more detail can be found on [medRxiv](https://www.medrxiv.org/content/10.1101/2021.11.30.21267056v1.full).
 
 ## Reproducibility
 
