@@ -42,7 +42,7 @@ utla_rt <- readRDS(here("data", "utla_rt_with_covariates.rds"))
 start_date <- format(min(utla_rt$week_infection), "%d %B %Y")
 end_date <- format(max(utla_rt$week_infection), "%d %B %Y")
 
-week_start <- readRDS(here("data", "sgene_by_utla.rds")) %>%
+week_start <- readRDS(here("data", "by_utla.rds")) %>%
   .$week_infection %>%
   subtract(7) %>%
   max() %>%
@@ -57,13 +57,9 @@ cases <- readRDS(here("data", "utla_cases.rds")) %>%
 
 utla_rt_cases <- utla_rt %>%
   left_join(cases, by = c("week_infection", "utla_name")) %>%
-  filter(week_infection >= "2020-10-01", !is.na(prop_sgtf))
+  filter(week_infection >= "2020-10-01", !is.na(prop))
 
-short_rt <- utla_rt_cases %>%
-  rename_with(~ sub(paste0("_short_gt"), "", .x)) %>%
-  filter(!is.na(rt_mean))
-long_rt <- utla_rt_cases %>%
-  rename_with(~ sub(paste0("_long_gt"), "", .x)) %>%
+rt <- utla_rt_cases %>%
   filter(!is.na(rt_mean))
 ```
 
@@ -138,7 +134,7 @@ fig1_cap <-
 
 ```{r r_vs_prop, echo=FALSE, fig.width=10, fig.height=10, fig.cap=fig1_cap}
 plot_rt <- function(rt_data) {
-  ggplot(rt_data, aes(x = prop_sgtf, y = rt_mean,
+  ggplot(rt_data, aes(x = prop, y = rt_mean,
                       fill = nhser_name, size = cases)) +
   geom_jitter(pch = 21) +
   facet_wrap(. ~ week_infection) +
@@ -152,22 +148,20 @@ plot_rt <- function(rt_data) {
         legend.direction = "horizontal",
         legend.box = "vertical")
 }
-suppressWarnings(plot_rt(long_rt))
+suppressWarnings(plot_rt(rt))
 ```
 
 ```{r load-models, echo = FALSE}
-models <- readRDS(here::here("output", "sgene_model_comparison.rds"))
+models <- readRDS(here::here("output", "model_comparison.rds"))
 fits <- list()
-for (gt in c("short", "long")) {
-  fits[[gt]] <- readRDS(here::here("output", paste0("sgene_fits_", gt, "_gt.rds")))
-}
-long <- fits[["long"]] %>%
+fits <- readRDS(here::here("output", paste0("fits.rds")))
+res <- fits %>%
   .$models %>%
   .$dynamic %>%
-  .$interventions_random_region
+  .$covariates_random_region
 
 effect_size <- function(gt, model, pos = 2) {
-  paste0(models[[gt]]$post[[model]][pos] * 100,"%")
+  paste0(models$post[[model]][pos] * 100,"%")
 }
 ```
 
@@ -177,36 +171,27 @@ fig2_cap <- "*Independent weekly estimates of the multiplicative increase in rep
 
 ```{r time-sliced, echo = FALSE, fig.cap = fig2_cap}
 estimates <- list()
-for (gg in c("short", "long")) {
-  samples <- lapply(names(fits[[gg]]$models$static), function(model) {
-    lapply(seq_along(fits[[gg]]$models$static[[model]]),
-           function(i) {
-             posterior_samples(fits[[gg]]$models$static[[model]][[i]]) %>%
-               as_tibble() %>%
-               mutate(model = model, i=i)
-           })
-                    }) %>%
-      bind_rows()
-  estimates[[gg]] <- samples %>%
-    mutate(week = max(utla_rt$week_infection) - (i - 1) * 7) %>%
-    group_by(model, week) %>%
-    summarise(low = quantile(alpha, 0.05),
-              high = quantile(alpha, 0.95),
-              .groups = "drop")
-}
-
-estimates <- bind_rows(estimates, .id = "gt") %>%
+samples <- lapply(names(fits$models$static), function(model) {
+  lapply(seq_along(fits$models$static[[model]]),
+         function(i) {
+           posterior_samples(fits$models$static[[model]][[i]]) %>%
+             as_tibble() %>%
+             mutate(model = model, i=i)
+         })
+                  }) %>%
+    bind_rows()
+estimates <- samples %>%
+  mutate(week = max(utla_rt$week_infection) - (i - 1) * 7) %>%
+  group_by(model, week) %>%
+  summarise(low = quantile(alpha, 0.05),
+            high = quantile(alpha, 0.95),
+            .groups = "drop") %>%
   filter(week != max(week)) %>%
-  mutate(model = stringi::stri_trans_totitle(model),
-         gt_exact = if_else(gt == "short", 3.6, 5.5),
-         gt = paste0(stringi::stri_trans_totitle(gt),
-                     " generation time (mean ",
-                     gt_exact, " days)")) %>%
+  mutate(model = stringi::stri_trans_totitle(model)) %>%
   rename(Model = model)
 
 ggplot(estimates, aes(x = week, ymin = low - 1, ymax = high - 1, colour = Model)) +
   geom_linerange(position = position_dodge(width = 0.5)) +
-  facet_wrap(~ gt, ncol = 1) +
   theme_minimal() +
   theme(legend.position = "bottom") +
   scale_colour_brewer(palette = "Dark2") +
@@ -215,21 +200,19 @@ ggplot(estimates, aes(x = week, ymin = low - 1, ymax = high - 1, colour = Model)
   expand_limits(y = 1)
 ```
 
-Using data from the `r start_date` to the `r end_date` we found consistent evidence of an association between S-gene positivity and increased UTLA level expected reproduction number estimates. The association became more apparent over time. The outer 90% credible intervals of the estimates in the time-sliced analysis (Fig. 2) ranged from a `r round((min(estimates$low) - 1) * 100 )`% increase to a `r round((max(estimates$high) - 1) * 100 )`% increase, in April/May, depending on the assumption about generation times and the model used, as the proportion of tests that were S-gene positive increased heterogeneously across NHS regions. Out of the models fitted to all time, ones that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Tab. 1). However, all models had evidence of increased $R_t$ with S-gene positivity with the best fitting model yielding a lower bound of `r effect_size("short","interventions_time_by_random_region", 1)` higher $R_t$ of S-gene positive cases with a short generation time (Tab. 2), higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","interventions_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("short","interventions_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","interventions_time_by_random_region", 1)`, `r effect_size("long","interventions_time_region_random", 1)`, and `r effect_size("long","interventions_random_region", 1)`, respectively. The upper bound of the increase in $R_t$ varied from `r effect_size("short","interventions_time_by_random_region", 3)` to `r effect_size("long","interventions_random_region", 3)` in models with different assumed generation times.
+Using data from the `r start_date` to the `r end_date` we found consistent evidence of an association between S-gene positivity and increased UTLA level expected reproduction number estimates. The association became more apparent over time. The outer 90% credible intervals of the estimates in the time-sliced analysis (Fig. 2) ranged from a `r round((min(estimates$low) - 1) * 100 )`% increase to a `r round((max(estimates$high) - 1) * 100 )`% increase, in April/May, depending on the assumption about generation times and the model used, as the proportion of tests that were S-gene positive increased heterogeneously across NHS regions. Out of the models fitted to all time, ones that adjusted for residual variation over time on both a national and NHS region level fit the data better than those that did not (Tab. 1). However, all models had evidence of increased $R_t$ with S-gene positivity with the best fitting model yielding a lower bound of `r effect_size("short","covariates_time_by_random_region", 1)` higher $R_t$ of S-gene positive cases with a short generation time (Tab. 2), higher than the model that only adjusted for national level residual variation over time (lower bound: `r effect_size("short","covariates_time_region_random", 1)`) and lower than the model that did not adjust for residual variation over time (lower bound: `r effect_size("short","covariates_random_region", 1)`). With a longer generation time, these lower bounds changed to `r effect_size("long","covariates_time_by_random_region", 1)`, `r effect_size("long","covariates_time_region_random", 1)`, and `r effect_size("long","covariates_random_region", 1)`, respectively. The upper bound of the increase in $R_t$ varied from `r effect_size("short","covariates_time_by_random_region", 3)` to `r effect_size("long","covariates_random_region", 3)` in models with different assumed generation times.
 
 The model that did not adjust for residual variation appeared to reproduce estimated reproduction numbers relatively well over time (Fig. 3) although there are notable outliers especially in early March, when some of the $R_t$ estimates may have been affected by the results of mass testing in schools entering the case data, and in some of the later weeks when Delta was increasingly prevalent. This model also yielded estimates of the relative impact of the different steps of reopening on $R_t$, with a relatively small effect in the order of 5-20% for each step, but combinedly possibly lifting $R_t$ close to 1 at the time of the third step of reopening even with the previously circulating Alpha variant (Fig. 4).
 
 ```{r regression_coeffs, echo = FALSE}
-st <- lapply(models,  function(x) {
-  lapply(x$post, function(y) {
+st <- lapply(models$post, function(y) {
     paste0(y[1],  "--",  y[3])
-  })
 })
 
 full_models <-
-  c(`Regional static` = "interventions_random_region",
-    `National time-varying` = "interventions_time_region_random",
-    `Regional time-varying` = "interventions_time_by_random_region")
+  c(`Regional static` = "covariates_random_region",
+    `National time-varying` = "covariates_time_region_random",
+    `Regional time-varying` = "covariates_time_by_random_region")
 ```
 
 ```{r loo_tab_cap, echo = FALSE}
@@ -239,27 +222,16 @@ loo_tab_cap <-
 
 ```{r loo_table, echo = FALSE}
 fn <- list()
-for (type in names(models)) {
-  lc <- loo::loo_compare(models[[type]]$loos[full_models])
-  fn[[type]] <-
+lc <- loo::loo_compare(models$loos[full_models])
+fn <-
     tibble::tibble(Model = names(full_models)[match(rownames(lc), full_models)],
                    `ELPD difference` = round(lc[, "elpd_diff"], 0),
                    `Standard error` = round(lc[, "se_diff"], 0))
-}
 
-tbl <- fn %>%
+fn %>%
   bind_rows() %>%
   kbl(caption = loo_tab_cap) %>%
   kable_styling()
-idx <- 1
-for (i in seq_along(fn)) {
-  tbl <- tbl %>%
-    pack_rows(paste(stringi::stri_trans_totitle(names(fn)[[i]]),
-                    "generation time"),
-              idx, idx + nrow(fn[[i]]) - 1)
-  idx <- idx + nrow(fn[[i]])
-}
-tbl
 ```
 
 ```{r reg_tab_cap, echo = FALSE}
@@ -269,25 +241,15 @@ reg_tab_cap <-
 
 ```{r regression_log_coeff_table, echo = FALSE}
 fn <- list()
-for (type in names(models)) {
-  lc <- loo::loo_compare(models[[type]]$loos[full_models])
-  fn[[type]] <-
-    tibble::tibble(Model = names(full_models),
-                   Estimate = unlist(st[[type]][full_models]))
-}
+lc <- loo::loo_compare(models$loos[full_models])
+fn <-
+  tibble::tibble(Model = names(full_models),
+                 Estimate = unlist(st[full_models]))
 
 tbl <- fn %>%
   bind_rows() %>%
   kbl(caption = reg_tab_cap) %>%
   kable_styling()
-idx <- 1
-for (i in seq_along(fn)) {
-  tbl <- tbl %>%
-    pack_rows(paste(stringi::stri_trans_totitle(names(fn)[[i]]),
-                    "generation time"),
-              idx, idx + nrow(fn[[i]]) - 1)
-  idx <- idx + nrow(fn[[i]])
-}
 tbl
 ```
 
@@ -300,9 +262,9 @@ fig3_cap <-
 ## calculate predicted intervals
 plot_pred_int <- function(gt, model,
                           quantiles = c(0.05, 0.25, 0.5, 0.75, 0.95)) {
-  y <- models[[gt]]$y
-  yrep <- models[[gt]]$yrep[[model]]
-  psis <- models[[gt]]$psis[[model]]
+  y <- models$y
+  yrep <- models$yrep[[model]]
+  psis <- models$psis[[model]]
   ## construct predicted quantiles
   data <- utla_rt_cases %>%
             slice_tail(n = length(y))
@@ -338,11 +300,11 @@ plot_pred_int <- function(gt, model,
   print(p)
 }
 
-p <- plot_pred_int("long", "interventions_random_region")
+p <- plot_pred_int("long", "covariates_random_region")
 ```
 
 ```{r fig4_cap, echo = FALSE}
-intercept <- long %>%
+intercept <- res %>%
   tidybayes::spread_draws(b_Intercept) %>%
   tidybayes::median_qi(.width = c(.95)) %>%
   tidyr::pivot_longer(c(b_Intercept, .lower, .upper)) %>%
@@ -356,7 +318,7 @@ fig4_cap <-
 ```
 
 ```{r regression_estimates, echo = FALSE, results = 'asis', fig.cap = fig4_cap}
-effects <- long %>%
+effects <- res %>%
   tidybayes::spread_draws(`b_(tier|groc|parks|trans|work|res).*`,
                           regex = TRUE) %>%
   tidybayes::median_qi(.width = c(.95, .50)) %>%
@@ -392,7 +354,7 @@ ggplot2::ggplot(effects, aes(x = variable, y = median,
 
 # Discussion
 
-We studied the relationship between S-gene positivity (as a proxy for the new variant of concern Delta ) and UTLA-level effective reproduction number estimates using four related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model that associated all temporal variation with interventions, mobility and SGTF produced the largest increases (central estimates: `r effect_size("long","interventions_random_region")` and `r effect_size("short","interventions_random_region")` increase with long and short generation interval, respectively). A more conservative, if more difficult to interpret, model with region-specific splines yielded central estimates of a `r effect_size("short","interventions_time_by_random_region")` and `r effect_size("long","interventions_time_by_random_region")` increase in $R_t$ with short and long generation interval, respectively. While this model yielded the best fit to the data the estimate of increased $R_t$ associated with SGTF may well be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-region UTLA-level differences. On the other hand, the fact that this model yielded a better fit than the model without splines suggests that that model is affected by confounders not included in the model.
+We studied the relationship between S-gene positivity (as a proxy for the new variant of concern Delta ) and UTLA-level effective reproduction number estimates using four related models that had varying degrees of flexibility in ascribing changes in the effective reproduction number to factors not explained by the proportion of cases with SGTF. The model that associated all temporal variation with interventions, mobility and SGTF produced the largest increases (central estimates: `r effect_size("long","covariates_random_region")` and `r effect_size("short","covariates_random_region")` increase with long and short generation interval, respectively). A more conservative, if more difficult to interpret, model with region-specific splines yielded central estimates of a `r effect_size("short","covariates_time_by_random_region")` and `r effect_size("long","covariates_time_by_random_region")` increase in $R_t$ with short and long generation interval, respectively. While this model yielded the best fit to the data the estimate of increased $R_t$ associated with SGTF may well be an underestimate as it can explain regional differences by unmodelled factors, i.e. ones beyond interventions, mobility, and distribution of SGTF, and is therefore largely a model of within-region UTLA-level differences. On the other hand, the fact that this model yielded a better fit than the model without splines suggests that that model is affected by confounders not included in the model.
 
 Our estimates that did not adjust for residual variation over time and used the longer generation interval estimate were consistent with ones from other preliminary rapid analyses using similar generation intervals (between 5-6 days), which were in the order of 13-57% [@keeling2021], 20-60% [@kucharski2021] increase, yet lower than another estimate of 50-100% [@ferguson2021]. They are also consistent with increased secondary attack rates from contact tracing during relevant time periods, increased from 8.2% (8.0%-8.4%) for "Alpha" to 12.4% (11.7%-13.2%), corresponding with an increased reproduction number of around 50% [@phe14]. That said, other model variants yield lower estimates consistent with the data, as do shorter generation intervals, which generally lead to reproduction numbers closer to 1 and thus lower estimates of a multiplicative effect. This may be particularly relevant where the effect of the variant causes the effective reproduction number to cross 1. In comparing our estimates to others, it is worth bearing in mind the difference between estimating differences in transmission between variants at the national or regional level as many of the other preliminary studies did, vs. the local level as we did. Considering the national picture implicitly gives greater weight to local areas where most cases occur, thus potentially introducing a bias if there are specific conditions that affect spread in these areas, whereas our approach implies weighing all local areas equally in trying to estimate differences in growth by SGTF, thus potentially being more affected by stochastic effects due to small case counts. As it is not clear a priori which of these approaches would yield more accurate estimates of true biological differences, it is useful to consider them in parallel in order to learn from any similarities or differences observed.
 
@@ -409,7 +371,7 @@ This project contains the following underlying raw and processed data:
 - `data/utla_rt_with_covariates.rds`: UTLA level weekly reproduction number estimates combined with estimates of the proportion of tests that were S-gene negative/positive, normalised Google mobility data, and tier status by local authority over time.
 - `data/rt_weekly.rds`: Summarised weekly UTLA reproduction number estimates using both a short and a long generation time.
 - `data/utla_cases.rds`: UTLA level COVID-19 test positive cases.
-- `data/sgene_by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
+- `data/by_utla.rds`: Weekly test positivity data for the S-gene by UTLA.
 - `data/mobility.rds`: Normalised Google mobility data stratified by context. 
 - `data/tiers.rds`: UTLA level tier level over time.
 
