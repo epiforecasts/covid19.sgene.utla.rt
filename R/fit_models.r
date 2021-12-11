@@ -10,8 +10,7 @@ options(mc.cores = detectCores())
 # Get data ----------------------------------------------------------------
 utla_rt_with_covariates <-
   readRDS(here("data", "utla_rt_with_covariates.rds")) %>%
-  filter(week_infection > "2020-10-01") %>%
-  mutate(tier = if_else(tier == tier[1], paste0("_", tier), tier))
+  filter(week_infection > "2020-10-01")
 
 # Add custom family -------------------------------------------------------
 add_var_student <- custom_family(
@@ -98,57 +97,54 @@ fit_models <- function(data, main_only = TRUE, parallel = TRUE,
   dynamic_models <- list()
   if ("dynamic" %in% type) {
     if (!main_only) {
-      dynamic_models[["interventions_only"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier)
-
-      dynamic_models[["interventions"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier +
+      dynamic_models[["covariates"]] <-
+        as.formula(rt_mean | vreal(prop) ~
           retail_and_recreation + transit_stations + workplaces + residential)
 
-      dynamic_models[["interventions_random"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier + (1 | utla_name) +
+      dynamic_models[["covariates_random"]] <-
+        as.formula(rt_mean | vreal(prop) ~ (1 | utla_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
 
-      dynamic_models[["interventions_region"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier + nhser_name +
+      dynamic_models[["covariates_region"]] <-
+        as.formula(rt_mean | vreal(prop) ~ nhser_name +
           retail_and_recreation + transit_stations + workplaces + residential)
     }
 
-    dynamic_models[["interventions_random_region"]] <-
-      as.formula(rt_mean | vreal(prop) ~ tier + (1 | utla_name) +
+    dynamic_models[["covariates_random_region"]] <-
+      as.formula(rt_mean | vreal(prop) ~ (1 | utla_name) +
         nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
-      dynamic_models[["interventions_time_region"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier + s(time, k = 9) +
+      dynamic_models[["covariates_time_region"]] <-
+        as.formula(rt_mean | vreal(prop) ~ s(time, k = 9) +
                      nhser_name + retail_and_recreation + transit_stations + workplaces + residential)
     }
 
-    dynamic_models[["interventions_time_region_random"]] <-
-      as.formula(rt_mean | vreal(prop) ~ tier + s(time, k = 9) +
+    dynamic_models[["covariates_time_region_random"]] <-
+      as.formula(rt_mean | vreal(prop) ~ s(time, k = 9) +
         (1 | utla_name) + nhser_name +
         retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
-      dynamic_models[["interventions_time_by_region"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier +
+      dynamic_models[["covariates_time_by_region"]] <-
+        as.formula(rt_mean | vreal(prop) ~
           s(time, k = 9, by = nhser_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
     }
 
-    dynamic_models[["interventions_time_by_random_region"]] <-
-      as.formula(rt_mean | vreal(prop) ~ tier +
+    dynamic_models[["covariates_time_by_random_region"]] <-
+      as.formula(rt_mean | vreal(prop) ~
         s(time, k = 9, by = nhser_name) +
         (1 | utla_name) +
         retail_and_recreation + transit_stations + workplaces + residential)
 
     if (!main_only) {
-      dynamic_models[["interventions_independent_time_region"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier + factor(time):nhser_name +
+      dynamic_models[["covariates_independent_time_region"]] <-
+        as.formula(rt_mean | vreal(prop) ~ factor(time):nhser_name +
           retail_and_recreation + transit_stations + workplaces + residential)
 
-      dynamic_models[["interventions_independent_time_random_region"]] <-
-        as.formula(rt_mean | vreal(prop) ~ tier + factor(time):nhser_name +
+      dynamic_models[["covariates_independent_time_random_region"]] <-
+        as.formula(rt_mean | vreal(prop) ~ factor(time):nhser_name +
           (1 | utla_name) +
           retail_and_recreation + transit_stations + workplaces + residential)
     }

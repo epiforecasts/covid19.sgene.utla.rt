@@ -16,11 +16,11 @@ compare_models <- function(file, type, models = NULL) {
     fits$models[[type]] <- fits$models[[type]][models]
   }
 
-  filetype <- sub("sgene_fits_", "", basename(file))
+  filetype <- sub("fits_", "", basename(file))
   filetype <- paste0(sub("\\.rds", "", filetype), "_", type)
 
   fit_data <- fits$data[[type]] %>%
-    filter(!is.na(prop_sgtf))
+    filter(!is.na(prop))
 
   ## Add custom family functions ---------------------------------------------
   expose_functions(fits$models[[type]][[1]], vectorize = TRUE)
@@ -73,11 +73,6 @@ compare_models <- function(file, type, models = NULL) {
               psis = psis))
 }
 
-gt <- c("short", "long")
-res <- lapply(gt, function(x) {
-  compare_models(here("output", paste0("sgene_fits_", x, "_gt.rds")),
-                 "dynamic")
-})
-names(res) <- gt
+res <- compare_models(here("output", paste0("fits.rds")), "dynamic")
 
-saveRDS(res, here("output", "sgene_model_comparison.rds"))
+saveRDS(res, here("output", "model_comparison.rds"))
